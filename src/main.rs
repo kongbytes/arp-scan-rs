@@ -24,6 +24,7 @@ fn main() {
         .version("0.1")
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface"))
+        .arg(Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout"))
         .get_matches();
 
     let interface_name = match matches.value_of("interface") {
@@ -34,23 +35,36 @@ fn main() {
         }
     };
 
+    let timeout_seconds: u64 = match matches.value_of("timeout") {
+        Some(seconds) => seconds.parse().unwrap_or(10),
+        None => 10
+    };
+
     // ----------------------
 
     let interfaces = datalink::interfaces();
 
     let selected_interface: &datalink::NetworkInterface = interfaces.iter()
-        .find(|interface| { interface.name == interface_name })
+        .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
         .unwrap_or_else(|| {
             println!("Could not find interface with name {}", interface_name);
             process::exit(1);
         });
 
-    let ip_address = match selected_interface.ips.first() {
-        Some(ip_details) => format!("{}", ip_details),
-        None => String::from("(none found)")
+    let ip_network = match selected_interface.ips.first() {
+        Some(ip_network) => ip_network,
+        None => {
+            println!("Expects a valid IP on the interface");
+            process::exit(1);
+        }
     };
+
+    if !ip_network.is_ipv4() {
+        println!("Only IPv4 supported");
+        process::exit(1);
+    }
     
-    println!("Selected interface {} with IP {}", selected_interface.name, ip_address);
+    println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
 
     // -----------------------
 
@@ -66,7 +80,7 @@ fn main() {
 
         loop {
 
-            if start_recording.elapsed().as_secs() > 10 {
+            if start_recording.elapsed().as_secs() > timeout_seconds {
                 break;
             }
             
@@ -92,8 +106,12 @@ fn main() {
 
     });
 
-    for n in 1..254 {
-        send_arp_request(&mut tx, selected_interface, Ipv4Addr::new(192, 168, 1, n));
+    println!("Sending {:?} ARP requests to network", ip_network.size());
+    for ip_address in ip_network.iter() {
+
+        if let IpAddr::V4(ipv4_address) = ip_address {
+            send_arp_request(&mut tx, selected_interface, ipv4_address);
+        }
     }
 
     // ------------------
