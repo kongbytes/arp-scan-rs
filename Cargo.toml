@@ -1,0 +1,9 @@
+[package]
+name = "arp-scan"
+version = "0.1.0"
+authors = ["Saluki"]
+edition = "2018"
+
+[dependencies]
+pnet = "0.27.2"
+clap = "2.33.3"
