@@ -1,5 +1,6 @@
 [package]
 name = "arp-scan"
+license = "AGPL-3.0-or-later"
 version = "0.1.0"
 authors = ["Saluki"]
 edition = "2018"
