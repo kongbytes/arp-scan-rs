@@ -12,11 +12,14 @@ use std::process;
 use std::thread;
 use std::time::Instant;
 
+fn is_root_user() -> bool {
+    std::env::var("USER").unwrap_or(String::from("")) == String::from("root")
+}
+
 fn main() {
 
-    let username = std::env::var("USER").unwrap_or(String::from(""));
-    if username != String::from("root") {
-        println!("Should run this binary as root");
+    if !is_root_user() {
+        eprintln!("Should run this binary as root");
         process::exit(1);
     }
 
@@ -30,7 +33,7 @@ fn main() {
     let interface_name = match matches.value_of("interface") {
         Some(name) => name,
         None => {
-            println!("Interface name required");
+            eprintln!("Interface name required");
             process::exit(1);
         }
     };
@@ -47,20 +50,20 @@ fn main() {
     let selected_interface: &datalink::NetworkInterface = interfaces.iter()
         .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
         .unwrap_or_else(|| {
-            println!("Could not find interface with name {}", interface_name);
+            eprintln!("Could not find interface with name {}", interface_name);
             process::exit(1);
         });
 
     let ip_network = match selected_interface.ips.first() {
         Some(ip_network) => ip_network,
         None => {
-            println!("Expects a valid IP on the interface");
+            eprintln!("Expects a valid IP on the interface");
             process::exit(1);
         }
     };
 
     if !ip_network.is_ipv4() {
-        println!("Only IPv4 supported");
+        eprintln!("Only IPv4 supported");
         process::exit(1);
     }
     
@@ -84,9 +87,16 @@ fn main() {
                 break;
             }
             
-            let arp_buffer = rx.next().unwrap();
+            let arp_buffer = rx.next().unwrap_or_else(|error| {
+                eprintln!("Failed to receive ARP requests ({})", error);
+                process::exit(1);
+            });
             
-            let ethernet_packet = EthernetPacket::new(&arp_buffer[..]).unwrap();
+            let ethernet_packet = match EthernetPacket::new(&arp_buffer[..]) {
+                Some(packet) => packet,
+                None => continue
+            };
+
             let is_arp = match ethernet_packet.get_ethertype() {
                 EtherTypes::Arp => true,
                 _ => false
@@ -116,7 +126,10 @@ fn main() {
 
     // ------------------
 
-    responses.join().unwrap();
+    responses.join().unwrap_or_else(|error| {
+        eprintln!("Failed to close receive thread ({:?})", error);
+        process::exit(1);
+    });
 }
 
 fn send_arp_request(tx: &mut Box<dyn pnet::datalink::DataLinkSender>, interface: &datalink::NetworkInterface, target_ip: Ipv4Addr) {
@@ -125,7 +138,10 @@ fn send_arp_request(tx: &mut Box<dyn pnet::datalink::DataLinkSender>, interface:
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
 
     let target_mac = datalink::MacAddr::broadcast();
-    let source_mac = interface.mac.unwrap();
+    let source_mac = interface.mac.unwrap_or_else(|| {
+        eprintln!("Interface should have a MAC address");
+        process::exit(1);
+    });
 
     ethernet_packet.set_destination(target_mac);
     ethernet_packet.set_source(source_mac);
@@ -134,7 +150,10 @@ fn send_arp_request(tx: &mut Box<dyn pnet::datalink::DataLinkSender>, interface:
     let mut arp_buffer = [0u8; 28];
     let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
 
-    let source_ip = interface.ips.first().unwrap().ip();
+    let source_ip = interface.ips.first().unwrap_or_else(|| {
+        eprintln!("Interface should have an IP address");
+        process::exit(1);
+    }).ip();
 
     let source_ipv4 = match source_ip {
         IpAddr::V4(ipv4_addr) => Some(ipv4_addr),
