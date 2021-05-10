@@ -4,6 +4,7 @@ use pnet::packet::ethernet::{MutableEthernetPacket, EtherTypes};
 use pnet::packet::MutablePacket;
 use pnet::packet::ethernet::EthernetPacket;
 use pnet::packet::Packet;
+use pnet::util::MacAddr;
 
 use clap::{Arg, App};
 
@@ -11,6 +12,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::process;
 use std::thread;
 use std::time::Instant;
+use std::collections::HashMap;
 
 fn is_root_user() -> bool {
     std::env::var("USER").unwrap_or(String::from("")) == String::from("root")
@@ -39,8 +41,8 @@ fn main() {
     };
 
     let timeout_seconds: u64 = match matches.value_of("timeout") {
-        Some(seconds) => seconds.parse().unwrap_or(10),
-        None => 10
+        Some(seconds) => seconds.parse().unwrap_or(5),
+        None => 5
     };
 
     // ----------------------
@@ -67,6 +69,7 @@ fn main() {
         process::exit(1);
     }
     
+    println!("");
     println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
 
     // -----------------------
@@ -79,6 +82,7 @@ fn main() {
 
     let responses = thread::spawn(move || {
 
+        let mut discover_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
         let start_recording = Instant::now();
 
         loop {
@@ -109,14 +113,23 @@ fn main() {
             let arp_packet = ArpPacket::new(&arp_buffer[MutableEthernetPacket::minimum_packet_size()..]);
 
             match arp_packet {
-                Some(arp) => println!("{} - {}", arp.get_sender_proto_addr(), arp.get_sender_hw_addr()),
+                Some(arp) => {
+
+                    let sender_ipv4 = arp.get_sender_proto_addr();
+                    let sender_mac = arp.get_sender_hw_addr();
+            
+                    discover_map.insert(sender_ipv4, sender_mac);
+
+                },
                 _ => ()
             }
         }
 
+        return discover_map;
+
     });
 
-    println!("Sending {:?} ARP requests to network", ip_network.size());
+    println!("Sending {:?} ARP requests to network ({}s timeout)", ip_network.size(), timeout_seconds);
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
@@ -126,10 +139,20 @@ fn main() {
 
     // ------------------
 
-    responses.join().unwrap_or_else(|error| {
+    let final_result = responses.join().unwrap_or_else(|error| {
         eprintln!("Failed to close receive thread ({:?})", error);
         process::exit(1);
     });
+
+    let mut sorted_map: Vec<(Ipv4Addr, MacAddr)> = final_result.into_iter().collect();
+    sorted_map.sort_by_key(|x| x.0);
+    println!("");
+    println!("| IPv4            | MAC               |");
+    println!("|-----------------|-------------------|");
+    for (result_ipv4, result_mac) in sorted_map {
+        println!("| {: <15} | {: <18} |", &result_ipv4, &result_mac);
+    }
+    println!("");
 }
 
 fn send_arp_request(tx: &mut Box<dyn pnet::datalink::DataLinkSender>, interface: &datalink::NetworkInterface, target_ip: Ipv4Addr) {
