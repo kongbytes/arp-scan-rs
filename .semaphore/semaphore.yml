@@ -3,9 +3,10 @@ name: Rust
 agent:
   machine:
     type: e1-standard-2
+    os_image: ubuntu1804
   containers:
     - name: main
-      image: registry.semaphoreci.com/rust:1.47
+      image: 'registry.semaphoreci.com/rust:1.47'
 blocks:
   - name: Test
     task:
@@ -15,3 +16,9 @@ blocks:
             - checkout
             - cargo build --verbose
             - cargo test --verbose
+  - name: Build release
+    task:
+      jobs:
+        - name: Configure
+          commands:
+            - rustup target add x86_64-unknown-linux-musl
