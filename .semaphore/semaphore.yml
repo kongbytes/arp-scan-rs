@@ -21,10 +21,7 @@ blocks:
       jobs:
         - name: Configure
           commands:
+            - checkout
             - rustup target add x86_64-unknown-linux-musl
-        - name: Build
-          commands:
             - cargo build --target=x86_64-unknown-linux-musl --locked
-        - name: Push artificact
-          commands:
             - artifact push job target/x86_64-unknown-linux-musl/release/arp-scan
