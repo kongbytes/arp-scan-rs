@@ -8,10 +8,10 @@ agent:
     - name: main
       image: 'registry.semaphoreci.com/rust:1.47'
 blocks:
-  - name: Test
+  - name: Test release
     task:
       jobs:
-        - name: cargo test
+        - name: Cargo test
           commands:
             - checkout
             - cargo build --verbose
@@ -22,3 +22,9 @@ blocks:
         - name: Configure
           commands:
             - rustup target add x86_64-unknown-linux-musl
+        - name: Build
+          commands:
+            - cargo build --target=x86_64-unknown-linux-musl --locked
+        - name: Push artificact
+          commands:
+            - artifact push job target/x86_64-unknown-linux-musl/release/arp-scan
