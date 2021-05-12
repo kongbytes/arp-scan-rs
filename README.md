@@ -7,20 +7,28 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 
 ## Gettings started
 
+Download the `arp-scan` binary for Linux.
+
+```bash
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.2.0/arp-scan-v0.2.0-x86_64-unknown-linux-musl
+
+chmod +x arp-scan
+```
+
 List all available network interfaces.
 
-```
-arp-scan -l
+```bash
+./arp-scan -l
 ```
 
 Launch a scan on interface `wlp1s0`.
 
-```
-arp-scan -i wlp1s0
+```bash
+./arp-scan -i wlp1s0
 ```
 
 Enhance the scan timeout to 15 seconds (by default, 5 seconds).
 
-```
-arp-scan -i wlp1s0 -t 15
+```bash
+./arp-scan -i wlp1s0 -t 15
 ```
