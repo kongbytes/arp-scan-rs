@@ -5,6 +5,7 @@ use pnet::packet::MutablePacket;
 use pnet::packet::ethernet::EthernetPacket;
 use pnet::packet::Packet;
 use pnet::util::MacAddr;
+use pnet::datalink::NetworkInterface;
 
 use clap::{Arg, App};
 
@@ -18,24 +19,53 @@ fn is_root_user() -> bool {
     std::env::var("USER").unwrap_or(String::from("")) == String::from("root")
 }
 
-fn main() {
+fn show_interfaces(interfaces: &Vec<NetworkInterface>) {
 
-    if !is_root_user() {
-        eprintln!("Should run this binary as root");
-        process::exit(1);
+    for interface in interfaces.iter() {
+        let up_text = match interface.is_up() {
+            true => "UP",
+            false => "DOWN"
+        };
+        let mac_text = match interface.mac {
+            Some(mac_address) => format!("{}", mac_address),
+            None => "No MAC address".to_string()
+        };
+        println!("{: <12} {: <7} {}", interface.name, up_text, mac_text);
     }
+}
+
+fn main() {
 
     let matches = App::new("arp-scan")
         .version("0.1")
         .about("A minimalistic ARP scan tool written in Rust")
-        .arg(Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface"))
-        .arg(Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout"))
+        .arg(
+            Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface")
+        )
+        .arg(
+            Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout")
+        )
+        .arg(
+            Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
+        )
         .get_matches();
+
+    // ----------------------
+
+    let interfaces = datalink::interfaces();
+
+    if matches.is_present("list") {
+        show_interfaces(&interfaces);
+        process::exit(0);
+    }
+
+    // ----------------------
 
     let interface_name = match matches.value_of("interface") {
         Some(name) => name,
         None => {
-            eprintln!("Interface name required");
+            eprintln!("Network interface name required");
+            eprintln!("Use 'arp scan -l' to list available interfaces");
             process::exit(1);
         }
     };
@@ -45,9 +75,10 @@ fn main() {
         None => 5
     };
 
-    // ----------------------
-
-    let interfaces = datalink::interfaces();
+    if !is_root_user() {
+        eprintln!("Should run this binary as root");
+        process::exit(1);
+    }
 
     let selected_interface: &datalink::NetworkInterface = interfaces.iter()
         .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
