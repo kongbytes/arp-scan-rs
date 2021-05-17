@@ -32,3 +32,21 @@ Enhance the scan timeout to 15 seconds (by default, 5 seconds).
 ```bash
 ./arp-scan -i wlp1s0 -t 15
 ```
+
+## Options
+
+### `arp-scan -l`
+
+List all available network interfaces. Using this option will only print a list of interfaces and exit the process.
+
+### `arp-scan -i eth0`
+
+Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target.
+
+### `arp-scan -t 15`
+
+Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `5`.
+
+## Contributing
+
+Feel free to suggest an improvement, report a bug, or ask something: https://github.com/saluki/arp-scan-rs/issues
