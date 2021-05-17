@@ -15,7 +15,7 @@ const TIMEOUT_DEFAULT: u64 = 5;
 fn main() {
 
     let matches = App::new("arp-scan")
-        .version("0.1")
+        .version("0.3.0")
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
             Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface")
