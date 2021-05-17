@@ -2,13 +2,25 @@ use std::process;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 use std::collections::HashMap;
+use dns_lookup::lookup_addr;
 
 use pnet::datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver};
 use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
 
-pub fn send_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr) {
+pub struct TargetDetails {
+    pub ipv4: Ipv4Addr,
+    pub mac: MacAddr,
+    pub hostname: Option<String>
+}
+
+/**
+ * Send a single ARP request - using a datalink-layer sender, a given network
+ * interface and a target IPv4 address. The ARP request will be broadcasted to
+ * the whole local network with the first valid IPv4 address on the interface.
+ */
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr) {
 
     let mut ethernet_buffer = [0u8; 42];
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
@@ -51,9 +63,15 @@ pub fn send_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterfa
     tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
 }
 
-pub fn receive_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds: u64) -> HashMap<Ipv4Addr, MacAddr> {
+/**
+ * Wait at least N seconds and receive ARP network responses. The main
+ * downside of this function is the blocking nature of the datalink receiver:
+ * when the N seconds are elapsed, the receiver loop will therefore only stop
+ * on the next received frame.
+ */
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds: u64, resolve_hostname: bool) -> Vec<TargetDetails> {
 
-    let mut discover_map: HashMap<Ipv4Addr, MacAddr> = HashMap::new();
+    let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
 
     loop {
@@ -83,18 +101,44 @@ pub fn receive_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds: u6
 
         let arp_packet = ArpPacket::new(&arp_buffer[MutableEthernetPacket::minimum_packet_size()..]);
 
-        match arp_packet {
-            Some(arp) => {
+        if let Some(arp) = arp_packet {
 
-                let sender_ipv4 = arp.get_sender_proto_addr();
-                let sender_mac = arp.get_sender_hw_addr();
-        
-                discover_map.insert(sender_ipv4, sender_mac);
-
-            },
-            _ => ()
+            let sender_ipv4 = arp.get_sender_proto_addr();
+            let sender_mac = arp.get_sender_hw_addr();
+    
+            discover_map.insert(sender_ipv4, TargetDetails {
+                ipv4: sender_ipv4,
+                mac: sender_mac,
+                hostname: None
+            });
         }
     }
 
-    return discover_map;
+    discover_map.into_iter().map(|(_, mut target_details)| {
+
+        if resolve_hostname {
+            target_details.hostname = find_hostname(target_details.ipv4);
+        }
+
+        target_details
+
+    }).collect()
+}
+
+fn find_hostname(ipv4: Ipv4Addr) -> Option<String> {
+
+    let ip: IpAddr = ipv4.into();
+    match lookup_addr(&ip) {
+        Ok(hostname) => {
+
+            // The 'lookup_addr' function returns an IP address if no hostname
+            // was found. If this is the case, we prefer switching to None.
+            if let Ok(_) = hostname.parse::<IpAddr>() {
+                return None; 
+            }
+
+            Some(hostname)
+        },
+        Err(_) => None
+    }
 }
