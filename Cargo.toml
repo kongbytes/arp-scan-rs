@@ -15,3 +15,4 @@ categories = ["command-line-utilities"]
 pnet = "0.28.0"
 ipnetwork = "0.18.0"
 clap = "2.33.3"
+dns-lookup = "1.0.6"

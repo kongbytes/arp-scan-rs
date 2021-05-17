@@ -1,4 +1,4 @@
-mod arp;
+mod network;
 mod utils;
 
 use std::net::{IpAddr};
@@ -8,6 +8,9 @@ use std::thread;
 use ipnetwork::NetworkSize;
 use pnet::datalink;
 use clap::{Arg, App};
+
+const FIVE_HOURS: u64 = 5 * 60 * 60; 
+const TIMEOUT_DEFAULT: u64 = 5;
 
 fn main() {
 
@@ -19,6 +22,9 @@ fn main() {
         )
         .arg(
             Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout")
+        )
+        .arg(
+            Arg::with_name("numeric").short("n").long("numeric").takes_value(false).help("Numeric mode, no hostname resolution")
         )
         .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
@@ -53,11 +59,19 @@ fn main() {
         }
     };
 
-    let timeout_seconds: u64 = match matches.value_of("timeout") {
-        Some(seconds) => seconds.parse().unwrap_or(5),
-        None => 5
+    let timeout_seconds: u64 = match matches.value_of("timeout").map(|seconds| seconds.parse::<u64>()) {
+        Some(seconds) => seconds.unwrap_or(TIMEOUT_DEFAULT),
+        None => TIMEOUT_DEFAULT
     };
 
+    if timeout_seconds > FIVE_HOURS {
+        eprintln!("The timeout exceeds the limit (maximum {} seconds allowed)", FIVE_HOURS);
+        process::exit(1);
+    }
+
+    // Hostnames will not be resolved in numeric mode
+    let resolve_hostname = !matches.is_present("numeric");
+    
     if !utils::is_root_user() {
         eprintln!("Should run this binary as root");
         process::exit(1);
@@ -98,7 +112,7 @@ fn main() {
         Err(error) => panic!(error)
     };
 
-    let arp_responses = thread::spawn(move || arp::receive_responses(&mut rx, timeout_seconds));
+    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, timeout_seconds, resolve_hostname));
 
     let network_size: u128 = match ip_network.size() {
         NetworkSize::V4(x) => x.into(),
@@ -109,7 +123,7 @@ fn main() {
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
-            arp::send_request(&mut tx, selected_interface, ipv4_address);
+            network::send_arp_request(&mut tx, selected_interface, ipv4_address);
         }
     }
 
@@ -118,5 +132,5 @@ fn main() {
         process::exit(1);
     });
 
-    utils::display_scan_results(final_result);
+    utils::display_scan_results(final_result, resolve_hostname);
 }

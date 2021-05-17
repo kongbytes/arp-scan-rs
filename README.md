@@ -35,17 +35,29 @@ Enhance the scan timeout to 15 seconds (by default, 5 seconds).
 
 ## Options
 
-### `arp-scan -l`
+### Get help `-h`
+
+Display the main help message with all commands and available ARP scan options.
+
+### List interfaces `-l`
 
 List all available network interfaces. Using this option will only print a list of interfaces and exit the process.
 
-### `arp-scan -i eth0`
+### Select interface `-i eth0`
 
 Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target.
 
-### `arp-scan -t 15`
+### Set timeout `-t 15`
 
 Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `5`.
+
+### Numeric mode `-n`
+
+Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
+
+### Show version `-n`
+
+Display the ARP scan CLI version and exits the process.
 
 ## Contributing
 
