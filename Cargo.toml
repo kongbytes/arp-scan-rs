@@ -12,5 +12,6 @@ keywords = ["arp", "scan", "network", "security"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-pnet = "0.27.2"
+pnet = "0.28.0"
+ipnetwork = "0.18.0"
 clap = "2.33.3"

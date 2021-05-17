@@ -5,6 +5,7 @@ use std::net::{IpAddr};
 use std::process;
 use std::thread;
 
+use ipnetwork::NetworkSize;
 use pnet::datalink;
 use clap::{Arg, App};
 
@@ -99,7 +100,12 @@ fn main() {
 
     let arp_responses = thread::spawn(move || arp::receive_responses(&mut rx, timeout_seconds));
 
-    println!("Sending {:?} ARP requests to network ({}s timeout)", ip_network.size(), timeout_seconds);
+    let network_size: u128 = match ip_network.size() {
+        NetworkSize::V4(x) => x.into(),
+        NetworkSize::V6(y) => y
+    };
+    println!("Sending {} ARP requests to network ({}s timeout)", network_size, timeout_seconds);
+
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
