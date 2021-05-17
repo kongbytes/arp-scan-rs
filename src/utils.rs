@@ -41,32 +41,3 @@ pub fn display_scan_results(mut final_result: Vec<TargetDetails>, resolve_hostna
 
     println!("");
 }
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn should_detect_root_user() {
-
-        let old_user = std::env::var("USER").unwrap();
-        std::env::set_var("USER", "root");
-
-        assert_eq!(is_root_user(), true);
-
-        std::env::set_var("USER", old_user);
-    }
-
-    #[test]
-    fn should_detect_standard_user() {
-
-        let old_user = std::env::var("USER").unwrap();
-        std::env::set_var("USER", "john");
-
-        assert_eq!(is_root_user(), false);
-
-        std::env::set_var("USER", old_user);
-    }
-
-}
