@@ -10,7 +10,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 Download the `arp-scan` binary for Linux.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.3.0/arp-scan-v0.2.0-x86_64-unknown-linux-musl
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.3.0/arp-scan-v0.3.0-x86_64-unknown-linux-musl
 
 chmod +x arp-scan
 ```
