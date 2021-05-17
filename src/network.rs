@@ -142,3 +142,34 @@ fn find_hostname(ipv4: Ipv4Addr) -> Option<String> {
         Err(_) => None
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn should_resolve_public_ip() {
+
+        let ipv4 = Ipv4Addr::new(1,1,1,1);
+
+        assert_eq!(find_hostname(ipv4), Some("one.one.one.one".to_string()));
+    }
+
+    #[test]
+    fn should_resolve_localhost() {
+
+        let ipv4 = Ipv4Addr::new(127,0,0,1);
+
+        assert_eq!(find_hostname(ipv4), Some("localhost".to_string()));
+    }
+
+    #[test]
+    fn should_not_resolve_unknown_ip() {
+
+        let ipv4 = Ipv4Addr::new(10,254,254,254);
+
+        assert_eq!(find_hostname(ipv4), None);
+    }
+
+}
