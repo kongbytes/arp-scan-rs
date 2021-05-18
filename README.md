@@ -6,9 +6,12 @@
 Find all hosts in your local network using this fast ARP scanner. The CLI is written in Rust and provides a minimal scanner that finds all hosts using the ARP protocol. Inspired by the awesome [arp-scan project](https://github.com/royhills/arp-scan).
 
 :heavy_check_mark: Minimal Rust binary
+
 :heavy_check_mark: Fast ARP scans
-:heavy_check_mark: Scan customization (timeout, interface, ...)
-:heavy_check_mark: Force request source IP
+
+:heavy_check_mark: Scan customization (timeout, interface, DNS, ...)
+
+:heavy_check_mark: Force ARP source IP
 
 ## Getting started
 
