@@ -9,6 +9,11 @@ use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
 
+/**
+ * A target detail represents a single host on the local network with an IPv4
+ * address and a linked MAC address. Hostnames are optional since some hosts
+ * does not respond to the resolve call (or the numeric mode may be enabled).
+ */
 pub struct TargetDetails {
     pub ipv4: Ipv4Addr,
     pub mac: MacAddr,
@@ -55,6 +60,11 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
 }
 
+/**
+ * Find the most adequate IPv4 address on a given network interface for sending
+ * ARP requests. If the 'forced_source_ipv4' parameter is set, it will take
+ * the priority over the network interface address.
+ */
 fn find_source_ip(interface: &NetworkInterface, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
 
     if let Some(forced_ipv4) = forced_source_ipv4 {
@@ -136,6 +146,10 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds
     }).collect()
 }
 
+/**
+ * Find the local hostname linked to an IPv4 address. This will perform a
+ * reverse DNS request in the local network to find the IPv4 hostname.
+ */
 fn find_hostname(ipv4: Ipv4Addr) -> Option<String> {
 
     let ip: IpAddr = ipv4.into();

@@ -2,10 +2,19 @@ use pnet::datalink::NetworkInterface;
 
 use crate::network::TargetDetails;
 
+/**
+ * Based on the current UNIX environment, find if the process is run as root
+ * user. This approach only supports Linux-like systems (Ubuntu, Fedore, ...).
+ */
 pub fn is_root_user() -> bool {
     std::env::var("USER").unwrap_or(String::from("")) == String::from("root")
 }
 
+/**
+ * Prints on stdout a list of all available network interfaces with some
+ * technical details. The goal is to present the most useful technical details
+ * to pick the right network interface for scans.
+ */
 pub fn show_interfaces(interfaces: &Vec<NetworkInterface>) {
 
     for interface in interfaces.iter() {
@@ -21,6 +30,10 @@ pub fn show_interfaces(interfaces: &Vec<NetworkInterface>) {
     }
 }
 
+/**
+ * Display the scan results on stdout with a table. The 'final_result' vector
+ * contains all items that will be displayed.
+ */
 pub fn display_scan_results(mut final_result: Vec<TargetDetails>, resolve_hostname: bool) {
 
     final_result.sort_by_key(|item| item.ipv4);

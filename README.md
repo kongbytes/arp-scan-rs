@@ -5,9 +5,14 @@
 
 Find all hosts in your local network using this fast ARP scanner. The CLI is written in Rust and provides a minimal scanner that finds all hosts using the ARP protocol. Inspired by the awesome [arp-scan project](https://github.com/royhills/arp-scan).
 
-## Gettings started
+:heavy_check_mark: Minimal Rust binary
+:heavy_check_mark: Fast ARP scans
+:heavy_check_mark: Scan customization (timeout, interface, ...)
+:heavy_check_mark: Force request source IP
 
-Download the `arp-scan` binary for Linux.
+## Getting started
+
+Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
 wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.3.0/arp-scan-v0.3.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
@@ -25,7 +30,7 @@ Launch a scan on interface `wlp1s0`.
 ./arp-scan -i wlp1s0
 ```
 
-Enhance the scan timeout to 15 seconds (by default, 5 seconds).
+Enhance the minimum scan timeout to 15 seconds (by default, 5 seconds).
 
 ```bash
 ./arp-scan -i wlp1s0 -t 15
@@ -53,11 +58,11 @@ Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans
 
 Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
 
-#### Change source IPv4 `-S`
+#### Change source IPv4 `-S 192.168.1.130`
 
 Change or force the IPv4 address sent as source in the broadcasted ARP packets. This may be useful for isolated hosts.
 
-#### Show version `-n`
+#### Show version `-v`
 
 Display the ARP scan CLI version and exits the process.
 
