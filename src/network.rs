@@ -20,7 +20,7 @@ pub struct TargetDetails {
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>) {
 
     let mut ethernet_buffer = [0u8; 42];
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
@@ -38,6 +38,29 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     let mut arp_buffer = [0u8; 28];
     let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
 
+    let source_ipv4 = find_source_ip(interface, forced_source_ipv4);
+
+    arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
+    arp_packet.set_protocol_type(EtherTypes::Ipv4);
+    arp_packet.set_hw_addr_len(6);
+    arp_packet.set_proto_addr_len(4);
+    arp_packet.set_operation(ArpOperations::Request);
+    arp_packet.set_sender_hw_addr(source_mac);
+    arp_packet.set_sender_proto_addr(source_ipv4);
+    arp_packet.set_target_hw_addr(target_mac);
+    arp_packet.set_target_proto_addr(target_ip);
+
+    ethernet_packet.set_payload(arp_packet.packet_mut());
+
+    tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
+}
+
+fn find_source_ip(interface: &NetworkInterface, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
+
+    if let Some(forced_ipv4) = forced_source_ipv4 {
+        return forced_ipv4;
+    }
+
     let source_ip = interface.ips.first().unwrap_or_else(|| {
         eprintln!("Interface should have an IP address");
         process::exit(1);
@@ -48,19 +71,7 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
         IpAddr::V6(_ipv6_addr) => None
     };
 
-    arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
-    arp_packet.set_protocol_type(EtherTypes::Ipv4);
-    arp_packet.set_hw_addr_len(6);
-    arp_packet.set_proto_addr_len(4);
-    arp_packet.set_operation(ArpOperations::Request);
-    arp_packet.set_sender_hw_addr(source_mac);
-    arp_packet.set_sender_proto_addr(source_ipv4.unwrap());
-    arp_packet.set_target_hw_addr(target_mac);
-    arp_packet.set_target_proto_addr(target_ip);
-
-    ethernet_packet.set_payload(arp_packet.packet_mut());
-
-    tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
+    source_ipv4.unwrap()
 }
 
 /**
