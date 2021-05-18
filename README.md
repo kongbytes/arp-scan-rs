@@ -53,6 +53,10 @@ Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans
 
 Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
 
+#### Change source IPv4 `-S`
+
+Change or force the IPv4 address sent as source in the broadcasted ARP packets. This may be useful for isolated hosts.
+
 #### Show version `-n`
 
 Display the ARP scan CLI version and exits the process.

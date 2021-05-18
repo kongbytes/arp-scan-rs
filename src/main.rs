@@ -1,7 +1,7 @@
 mod network;
 mod utils;
 
-use std::net::{IpAddr};
+use std::net::{IpAddr, Ipv4Addr};
 use std::process;
 use std::thread;
 
@@ -22,6 +22,9 @@ fn main() {
         )
         .arg(
             Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout")
+        )
+        .arg(
+            Arg::with_name("source_ip").short("S").long("source-ip").takes_value(true).value_name("SOURCE_IPV4").help("Source IPv4 address for requests")
         )
         .arg(
             Arg::with_name("numeric").short("n").long("numeric").takes_value(false).help("Numeric mode, no hostname resolution")
@@ -71,6 +74,19 @@ fn main() {
 
     // Hostnames will not be resolved in numeric mode
     let resolve_hostname = !matches.is_present("numeric");
+
+    let source_ipv4: Option<Ipv4Addr> = match matches.value_of("source_ip").map(|source| source.parse::<Ipv4Addr>()) {
+        Some(parsed_source) => {
+            
+            if let Err(_) = parsed_source {
+                eprintln!("Expected valid IPv4 as source IP");
+                process::exit(1);
+            }
+
+            Some(parsed_source.unwrap())
+        }, 
+        None => None
+    };
     
     if !utils::is_root_user() {
         eprintln!("Should run this binary as root");
@@ -99,6 +115,9 @@ fn main() {
     
     println!("");
     println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
+    if let Some(forced_source_ipv4) = source_ipv4 {
+        println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
+    }
 
     // Start ARP scan operation
     // ------------------------
@@ -123,7 +142,7 @@ fn main() {
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
-            network::send_arp_request(&mut tx, selected_interface, ipv4_address);
+            network::send_arp_request(&mut tx, selected_interface, ipv4_address, source_ipv4);
         }
     }
 
