@@ -25,12 +25,15 @@ pub struct TargetDetails {
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>, forced_destination_mac: Option<MacAddr>) {
 
     let mut ethernet_buffer = [0u8; 42];
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
 
-    let target_mac = MacAddr::broadcast();
+    let target_mac = match forced_destination_mac {
+        Some(forced_mac) => forced_mac,
+        None => MacAddr::broadcast()
+    };
     let source_mac = interface.mac.unwrap_or_else(|| {
         eprintln!("Interface should have a MAC address");
         process::exit(1);
