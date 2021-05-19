@@ -7,10 +7,11 @@ use std::thread;
 
 use ipnetwork::NetworkSize;
 use pnet::datalink;
+use pnet::datalink::{MacAddr};
 use clap::{Arg, App};
 
 const FIVE_HOURS: u64 = 5 * 60 * 60; 
-const TIMEOUT_DEFAULT: u64 = 5;
+const TIMEOUT_DEFAULT: u64 = 2;
 
 fn main() {
 
@@ -25,6 +26,9 @@ fn main() {
         )
         .arg(
             Arg::with_name("source_ip").short("S").long("source-ip").takes_value(true).value_name("SOURCE_IPV4").help("Source IPv4 address for requests")
+        )
+        .arg(
+            Arg::with_name("destination_mac").short("M").long("dest-mac").takes_value(true).value_name("DESTINATION_MAC").help("Destination MAC address for requests")
         )
         .arg(
             Arg::with_name("numeric").short("n").long("numeric").takes_value(false).help("Numeric mode, no hostname resolution")
@@ -87,6 +91,19 @@ fn main() {
         }, 
         None => None
     };
+
+    let destination_mac: Option<MacAddr> = match matches.value_of("destination_mac").map(|dest| dest.parse::<MacAddr>()) {
+        Some(mac_address) => {
+            
+            if let Err(_) = mac_address {
+                eprintln!("Expected valid MAC address as destination");
+                process::exit(1);
+            }
+
+            Some(mac_address.unwrap())
+        },
+        None => None
+    };
     
     if !utils::is_root_user() {
         eprintln!("Should run this binary as root");
@@ -118,6 +135,9 @@ fn main() {
     if let Some(forced_source_ipv4) = source_ipv4 {
         println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
     }
+    if let Some(forced_destination_mac) = destination_mac {
+        println!("The ARP destination MAC will be forced to {}", forced_destination_mac);
+    }
 
     // Start ARP scan operation
     // ------------------------
@@ -142,7 +162,7 @@ fn main() {
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
-            network::send_arp_request(&mut tx, selected_interface, ipv4_address, source_ipv4);
+            network::send_arp_request(&mut tx, selected_interface, ipv4_address, source_ipv4, destination_mac);
         }
     }
 

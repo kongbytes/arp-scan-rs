@@ -33,10 +33,10 @@ Launch a scan on interface `wlp1s0`.
 ./arp-scan -i wlp1s0
 ```
 
-Enhance the minimum scan timeout to 15 seconds (by default, 5 seconds).
+Enhance the minimum scan timeout to 5 seconds (by default, 2 seconds).
 
 ```bash
-./arp-scan -i wlp1s0 -t 15
+./arp-scan -i wlp1s0 -t 5
 ```
 
 ## Options
@@ -55,7 +55,7 @@ Perform a scan on the network interface `eth0`. The first valid IPv4 network on 
 
 #### Set timeout `-t 15`
 
-Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `5`.
+Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2`.
 
 #### Numeric mode `-n`
 
@@ -63,7 +63,11 @@ Switch to numeric mode. This will skip the local hostname resolution process and
 
 #### Change source IPv4 `-S 192.168.1.130`
 
-Change or force the IPv4 address sent as source in the broadcasted ARP packets. This may be useful for isolated hosts.
+Change or force the IPv4 address sent as source in the broadcasted ARP packets. By default, a valid IPv4 address on the network interface will be used. This option may be useful for isolated hosts and security checks.
+
+#### Change destination MAC `-M 55:44:33:22:11:00`
+
+Change or force the MAC address sent as destination ARP request. By default, a broadcast destination (`00:00:00:00:00:00`) will be set.
 
 #### Show version `-v`
 
