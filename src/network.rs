@@ -8,6 +8,14 @@ use pnet::datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver
 use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
+use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
+
+const VLAN_QOS_DEFAULT: u8 = 1;
+const ARP_PACKET_SIZE: usize = 28;
+const VLAN_PACKET_SIZE: usize = 32;
+
+const ETHERNET_STD_PACKET_SIZE: usize = 42;
+const ETHERNET_VLAN_PACKET_SIZE: usize = 46;
 
 /**
  * A target detail represents a single host on the local network with an IPv4
@@ -25,9 +33,12 @@ pub struct TargetDetails {
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>, forced_destination_mac: Option<MacAddr>) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>, forced_destination_mac: Option<MacAddr>, forced_vlan_id: Option<u16>) {
 
-    let mut ethernet_buffer = [0u8; 42];
+    let mut ethernet_buffer = match forced_vlan_id {
+        Some(_) => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
+        None => vec![0u8; ETHERNET_STD_PACKET_SIZE]
+    };
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
 
     let target_mac = match forced_destination_mac {
@@ -41,9 +52,14 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
 
     ethernet_packet.set_destination(target_mac);
     ethernet_packet.set_source(source_mac);
-    ethernet_packet.set_ethertype(EtherTypes::Arp);
 
-    let mut arp_buffer = [0u8; 28];
+    let selected_ethertype = match forced_vlan_id {
+        Some(_) => EtherTypes::Vlan,
+        None => EtherTypes::Arp
+    };
+    ethernet_packet.set_ethertype(selected_ethertype);
+
+    let mut arp_buffer = [0u8; ARP_PACKET_SIZE];
     let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
 
     let source_ipv4 = find_source_ip(interface, forced_source_ipv4);
@@ -58,7 +74,22 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     arp_packet.set_target_hw_addr(target_mac);
     arp_packet.set_target_proto_addr(target_ip);
 
-    ethernet_packet.set_payload(arp_packet.packet_mut());
+    if let Some(vlan_id) = forced_vlan_id {
+
+        let mut vlan_buffer = [0u8; VLAN_PACKET_SIZE];
+        let mut vlan_packet = MutableVlanPacket::new(&mut vlan_buffer).unwrap();
+        vlan_packet.set_vlan_identifier(vlan_id);
+        vlan_packet.set_priority_code_point(ClassOfService::new(VLAN_QOS_DEFAULT));
+        vlan_packet.set_drop_eligible_indicator(0);
+        vlan_packet.set_ethertype(EtherTypes::Arp);
+
+        vlan_packet.set_payload(arp_packet.packet_mut());
+
+        ethernet_packet.set_payload(vlan_packet.packet_mut());
+    }
+    else {
+        ethernet_packet.set_payload(arp_packet.packet_mut());
+    }
 
     tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
 }

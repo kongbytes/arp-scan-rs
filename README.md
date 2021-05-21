@@ -69,6 +69,10 @@ Change or force the IPv4 address sent as source in the broadcasted ARP packets. 
 
 Change or force the MAC address sent as destination ARP request. By default, a broadcast destination (`00:00:00:00:00:00`) will be set.
 
+#### Set VLAN ID `-Q 540`
+
+Add a 802.1Q field in the Ethernet frame. This fields contains the given VLAN ID for outgoing ARP requests. By default, the Ethernet frame is sent without 802.1Q fields (no VLAN).
+
 #### Show version `--version`
 
 Display the ARP scan CLI version and exits the process.
