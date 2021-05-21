@@ -33,6 +33,9 @@ fn main() {
             Arg::with_name("numeric").short("n").long("numeric").takes_value(false).help("Numeric mode, no hostname resolution")
         )
         .arg(
+            Arg::with_name("vlan").short("Q").long("vlan").takes_value(true).value_name("VLAN_ID").help("Send using 802.1Q with VLAN ID")
+        )
+        .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
         .get_matches();
@@ -111,6 +114,20 @@ fn main() {
         },
         None => None
     };
+
+    let vlan_id: Option<u16> = match matches.value_of("vlan") {
+        Some(vlan) => {
+
+            match vlan.parse::<u16>() {
+                Ok(vlan_number) => Some(vlan_number),
+                Err(_) => {
+                    eprintln!("Expected valid VLAN identifier");
+                    process::exit(1);
+                }
+            }
+        },
+        None => None
+    };
     
     if !utils::is_root_user() {
         eprintln!("Should run this binary as root");
@@ -169,7 +186,7 @@ fn main() {
     for ip_address in ip_network.iter() {
 
         if let IpAddr::V4(ipv4_address) = ip_address {
-            network::send_arp_request(&mut tx, selected_interface, ipv4_address, source_ipv4, destination_mac);
+            network::send_arp_request(&mut tx, selected_interface, ipv4_address, source_ipv4, destination_mac, vlan_id);
         }
     }
 
