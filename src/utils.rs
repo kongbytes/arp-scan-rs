@@ -1,4 +1,4 @@
-use pnet::datalink::NetworkInterface;
+use pnet::datalink::{self, NetworkInterface};
 
 use crate::network::TargetDetails;
 
@@ -28,6 +28,33 @@ pub fn show_interfaces(interfaces: &Vec<NetworkInterface>) {
         };
         println!("{: <17} {: <7} {}", interface.name, up_text, mac_text);
     }
+}
+
+/**
+ * Find a default network interface for scans, based on the operating system
+ * priority and some interface technical details.
+ */
+pub fn select_default_interface() -> Option<NetworkInterface> {
+
+    let interfaces = datalink::interfaces();
+
+    interfaces.into_iter().find(|interface| {
+
+        if let None = interface.mac {
+            return false;
+        }
+
+        if interface.ips.len() == 0 || !interface.is_up() || interface.is_loopback() {
+            return false;
+        }
+
+        let potential_ipv4 = interface.ips.iter().find(|ip| ip.is_ipv4());
+        if let None = potential_ipv4 {
+            return false;
+        }
+
+        true
+    })
 }
 
 /**
