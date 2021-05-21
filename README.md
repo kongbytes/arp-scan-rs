@@ -51,7 +51,7 @@ List all available network interfaces. Using this option will only print a list 
 
 #### Select interface `-i eth0`
 
-Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target.
+Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target. By default, the first network interface with an `up` status and a valid IPv4 will be selected.
 
 #### Set global scan timeout `-t 15`
 

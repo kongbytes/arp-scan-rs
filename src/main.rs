@@ -6,8 +6,7 @@ use std::process;
 use std::thread;
 
 use ipnetwork::NetworkSize;
-use pnet::datalink;
-use pnet::datalink::{MacAddr};
+use pnet::datalink::{self, MacAddr};
 use clap::{Arg, App};
 
 const FIVE_HOURS: u64 = 5 * 60 * 60; 
@@ -58,11 +57,19 @@ fn main() {
     // with an IPv4 address and root permissions (for crafting ARP packets).
 
     let interface_name = match matches.value_of("interface") {
-        Some(name) => name,
+        Some(name) => String::from(name),
         None => {
-            eprintln!("Network interface name required");
-            eprintln!("Use 'arp scan -l' to list available interfaces");
-            process::exit(1);
+
+            match utils::select_default_interface() {
+                Some(default_interface) => {
+                    String::from(default_interface.name)
+                },
+                None => {
+                    eprintln!("Network interface name required");
+                    eprintln!("Use 'arp scan -l' to list available interfaces");
+                    process::exit(1);
+                }
+            }
         }
     };
 
