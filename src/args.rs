@@ -6,6 +6,7 @@ use pnet::datalink::MacAddr;
 
 const FIVE_HOURS: u64 = 5 * 60 * 60; 
 const TIMEOUT_DEFAULT: u64 = 2;
+const HOST_RETRY_DEFAULT: usize = 1;
 
 pub fn build_args<'a, 'b>() -> App<'a, 'b> {
 
@@ -31,6 +32,9 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("vlan").short("Q").long("vlan").takes_value(true).value_name("VLAN_ID").help("Send using 802.1Q with VLAN ID")
         )
         .arg(
+            Arg::with_name("retry_count").short("r").long("retry").takes_value(true).value_name("RETRY_COUNT").help("Host retry attempt count")
+        )
+        .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
 }
@@ -42,7 +46,8 @@ pub struct ScanOptions {
     pub resolve_hostname: bool,
     pub source_ipv4: Option<Ipv4Addr>,
     pub destination_mac: Option<MacAddr>,
-    pub vlan_id: Option<u16>
+    pub vlan_id: Option<u16>,
+    pub retry_count: usize
 }
 
 impl ScanOptions {
@@ -120,6 +125,20 @@ impl ScanOptions {
             },
             None => None
         };
+
+        let retry_count = match matches.value_of("retry_count") {
+            Some(retry_count) => {
+    
+                match retry_count.parse::<usize>() {
+                    Ok(retry_number) => retry_number,
+                    Err(_) => {
+                        eprintln!("Expected positive number for host retry count");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => HOST_RETRY_DEFAULT
+        };
     
         ScanOptions {
             interface_name,
@@ -127,7 +146,8 @@ impl ScanOptions {
             resolve_hostname,
             source_ipv4,
             destination_mac,
-            vlan_id
+            vlan_id,
+            retry_count
         }
     }
 
