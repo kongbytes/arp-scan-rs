@@ -97,10 +97,14 @@ fn main() {
     };
     println!("Sending {} ARP requests to network ({}s timeout)", network_size, scan_options.timeout_seconds);
 
-    for ip_address in ip_network.iter() {
+    // The retry count does right now use a 'brute-force' strategy without
+    // synchronization process with the already known hosts.
+    for _ in 0..scan_options.retry_count {
+        for ip_address in ip_network.iter() {
 
-        if let IpAddr::V4(ipv4_address) = ip_address {
-            network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, &scan_options);
+            if let IpAddr::V4(ipv4_address) = ip_address {
+                network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, &scan_options);
+            }
         }
     }
 

@@ -61,6 +61,10 @@ Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans
 
 Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
 
+#### Host retry count `-r 3`
+
+Send 3 ARP requests to the targets (retry count). By default, a single ARP request will be sent to each host.
+
 #### Change source IPv4 `-S 192.168.1.130`
 
 Change or force the IPv4 address sent as source in the broadcasted ARP packets. By default, a valid IPv4 address on the network interface will be used. This option may be useful for isolated hosts and security checks.
