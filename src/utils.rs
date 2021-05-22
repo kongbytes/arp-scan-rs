@@ -1,6 +1,7 @@
 use pnet::datalink::{self, NetworkInterface};
 
 use crate::network::TargetDetails;
+use crate::args::ScanOptions;
 
 /**
  * Based on the current UNIX environment, find if the process is run as root
@@ -61,7 +62,7 @@ pub fn select_default_interface() -> Option<NetworkInterface> {
  * Display the scan results on stdout with a table. The 'final_result' vector
  * contains all items that will be displayed.
  */
-pub fn display_scan_results(mut final_result: Vec<TargetDetails>, resolve_hostname: bool) {
+pub fn display_scan_results(mut final_result: Vec<TargetDetails>, options: &ScanOptions) {
 
     final_result.sort_by_key(|item| item.ipv4);
 
@@ -73,7 +74,7 @@ pub fn display_scan_results(mut final_result: Vec<TargetDetails>, resolve_hostna
 
         let hostname = match result_item.hostname {
             Some(hostname) => hostname,
-            None if !resolve_hostname => String::from("(disabled)"),
+            None if !options.resolve_hostname => String::from("(disabled)"),
             None => String::from("")
         };
         println!("| {: <15} | {: <18} | {: <21} |", result_item.ipv4, result_item.mac, hostname);
