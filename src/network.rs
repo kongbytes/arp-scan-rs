@@ -4,11 +4,14 @@ use std::time::Instant;
 use std::collections::HashMap;
 use dns_lookup::lookup_addr;
 
+use ipnetwork::IpNetwork;
 use pnet::datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver};
 use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
 use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
+
+use crate::args::ScanOptions;
 
 const VLAN_QOS_DEFAULT: u8 = 1;
 const ARP_PACKET_SIZE: usize = 28;
@@ -33,15 +36,18 @@ pub struct TargetDetails {
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, target_ip: Ipv4Addr, forced_source_ipv4: Option<Ipv4Addr>, forced_destination_mac: Option<MacAddr>, forced_vlan_id: Option<u16>) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, ip_network: &IpNetwork, target_ip: Ipv4Addr, options: &ScanOptions) {
 
-    let mut ethernet_buffer = match forced_vlan_id {
+    let mut ethernet_buffer = match options.vlan_id {
         Some(_) => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
         None => vec![0u8; ETHERNET_STD_PACKET_SIZE]
     };
-    let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
+    let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap_or_else(|| {
+        eprintln!("Could not build Ethernet packet");
+        process::exit(1);
+    });
 
-    let target_mac = match forced_destination_mac {
+    let target_mac = match options.destination_mac {
         Some(forced_mac) => forced_mac,
         None => MacAddr::broadcast()
     };
@@ -53,16 +59,19 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     ethernet_packet.set_destination(target_mac);
     ethernet_packet.set_source(source_mac);
 
-    let selected_ethertype = match forced_vlan_id {
+    let selected_ethertype = match options.vlan_id {
         Some(_) => EtherTypes::Vlan,
         None => EtherTypes::Arp
     };
     ethernet_packet.set_ethertype(selected_ethertype);
 
     let mut arp_buffer = [0u8; ARP_PACKET_SIZE];
-    let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
+    let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap_or_else(|| {
+        eprintln!("Could not build ARP packet");
+        process::exit(1);
+    });
 
-    let source_ipv4 = find_source_ip(interface, forced_source_ipv4);
+    let source_ipv4 = find_source_ip(ip_network, options.source_ipv4);
 
     arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
     arp_packet.set_protocol_type(EtherTypes::Ipv4);
@@ -74,10 +83,13 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     arp_packet.set_target_hw_addr(target_mac);
     arp_packet.set_target_proto_addr(target_ip);
 
-    if let Some(vlan_id) = forced_vlan_id {
+    if let Some(vlan_id) = options.vlan_id {
 
         let mut vlan_buffer = [0u8; VLAN_PACKET_SIZE];
-        let mut vlan_packet = MutableVlanPacket::new(&mut vlan_buffer).unwrap();
+        let mut vlan_packet = MutableVlanPacket::new(&mut vlan_buffer).unwrap_or_else(|| {
+            eprintln!("Could not build VLAN packet");
+            process::exit(1);
+        });
         vlan_packet.set_vlan_identifier(vlan_id);
         vlan_packet.set_priority_code_point(ClassOfService::new(VLAN_QOS_DEFAULT));
         vlan_packet.set_drop_eligible_indicator(0);
@@ -99,23 +111,19 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
  * ARP requests. If the 'forced_source_ipv4' parameter is set, it will take
  * the priority over the network interface address.
  */
-fn find_source_ip(interface: &NetworkInterface, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
+fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
 
     if let Some(forced_ipv4) = forced_source_ipv4 {
         return forced_ipv4;
     }
 
-    let source_ip = interface.ips.first().unwrap_or_else(|| {
-        eprintln!("Interface should have an IP address");
-        process::exit(1);
-    }).ip();
-
-    let source_ipv4 = match source_ip {
-        IpAddr::V4(ipv4_addr) => Some(ipv4_addr),
-        IpAddr::V6(_ipv6_addr) => None
-    };
-
-    source_ipv4.unwrap()
+    match ip_network.ip() {
+        IpAddr::V4(ipv4_addr) => ipv4_addr,
+        IpAddr::V6(_ipv6_addr) => {
+            eprintln!("Expected IPv4 address on network interface, found IPv6");
+            process::exit(1);
+        }
+    }
 }
 
 /**
@@ -124,14 +132,14 @@ fn find_source_ip(interface: &NetworkInterface, forced_source_ipv4: Option<Ipv4A
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds: u64, resolve_hostname: bool) -> Vec<TargetDetails> {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanOptions) -> Vec<TargetDetails> {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
 
     loop {
 
-        if start_recording.elapsed().as_secs() > timeout_seconds {
+        if start_recording.elapsed().as_secs() > options.timeout_seconds {
             break;
         }
         
@@ -171,7 +179,7 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, timeout_seconds
 
     discover_map.into_iter().map(|(_, mut target_details)| {
 
-        if resolve_hostname {
+        if options.resolve_hostname {
             target_details.hostname = find_hostname(target_details.ipv4);
         }
 
