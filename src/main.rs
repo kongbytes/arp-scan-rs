@@ -49,18 +49,17 @@ fn main() {
         });
 
     let ip_network = match selected_interface.ips.first() {
-        Some(ip_network) => ip_network,
+        Some(ip_network) if ip_network.is_ipv4() => ip_network,
+        Some(_) => {
+            eprintln!("Only IPv4 networks supported");
+            process::exit(1);
+        },
         None => {
-            eprintln!("Expects a valid IP on the interface");
+            eprintln!("Expects a valid IP on the interface, none found");
             process::exit(1);
         }
     };
 
-    if !ip_network.is_ipv4() {
-        eprintln!("Only IPv4 supported");
-        process::exit(1);
-    }
-    
     println!("");
     println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
     if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
@@ -88,12 +87,17 @@ fn main() {
         }
     };
 
+    // The options are right now cloned, since they are moved in the response
+    // -catching thread, while also being used in the main thread after.
     let cloned_options = scan_options.clone();
     let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, &cloned_options));
 
     let network_size: u128 = match ip_network.size() {
-        NetworkSize::V4(x) => x.into(),
-        NetworkSize::V6(y) => y
+        NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
+        NetworkSize::V6(_) => {
+            eprintln!("IPv6 networks are not supported by the ARP protocol");
+            process::exit(1);
+        }
     };
     println!("Sending {} ARP requests to network ({}s timeout)", network_size, scan_options.timeout_seconds);
 
@@ -108,10 +112,10 @@ fn main() {
         }
     }
 
-    let final_result = arp_responses.join().unwrap_or_else(|error| {
+    let (response_summary, target_details) = arp_responses.join().unwrap_or_else(|error| {
         eprintln!("Failed to close receive thread ({:?})", error);
         process::exit(1);
     });
 
-    utils::display_scan_results(final_result, &scan_options);
+    utils::display_scan_results(response_summary, target_details, &scan_options);
 }

@@ -21,6 +21,15 @@ const ETHERNET_STD_PACKET_SIZE: usize = 42;
 const ETHERNET_VLAN_PACKET_SIZE: usize = 46;
 
 /**
+ * Gives high-level details about the scan response. This may include Ethernet
+ * details (packet count, size, ...) and other technical network aspects.
+ */
+pub struct ResponseSummary {
+    pub packet_count: usize,
+    pub arp_count: usize
+}
+
+/**
  * A target detail represents a single host on the local network with an IPv4
  * address and a linked MAC address. Hostnames are optional since some hosts
  * does not respond to the resolve call (or the numeric mode may be enabled).
@@ -132,10 +141,13 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanOptions) -> Vec<TargetDetails> {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanOptions) -> (ResponseSummary, Vec<TargetDetails>) {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
+
+    let mut packet_count = 0;
+    let mut arp_count = 0;
 
     loop {
 
@@ -147,6 +159,7 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanO
             eprintln!("Failed to receive ARP requests ({})", error);
             process::exit(1);
         });
+        packet_count += 1;
         
         let ethernet_packet = match EthernetPacket::new(&arp_buffer[..]) {
             Some(packet) => packet,
@@ -163,6 +176,7 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanO
         }
 
         let arp_packet = ArpPacket::new(&arp_buffer[MutableEthernetPacket::minimum_packet_size()..]);
+        arp_count += 1;
 
         if let Some(arp) = arp_packet {
 
@@ -177,15 +191,17 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanO
         }
     }
 
-    discover_map.into_iter().map(|(_, mut target_details)| {
+    let target_details = discover_map.into_iter().map(|(_, mut target_detail)| {
 
         if options.resolve_hostname {
-            target_details.hostname = find_hostname(target_details.ipv4);
+            target_detail.hostname = find_hostname(target_detail.ipv4);
         }
 
-        target_details
+        target_detail
 
-    }).collect()
+    }).collect();
+
+    (ResponseSummary { packet_count, arp_count }, target_details)
 }
 
 /**
