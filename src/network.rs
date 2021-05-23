@@ -26,7 +26,8 @@ const ETHERNET_VLAN_PACKET_SIZE: usize = 46;
  */
 pub struct ResponseSummary {
     pub packet_count: usize,
-    pub arp_count: usize
+    pub arp_count: usize,
+    pub duration_ms: u128
 }
 
 /**
@@ -201,7 +202,12 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanO
 
     }).collect();
 
-    (ResponseSummary { packet_count, arp_count }, target_details)
+    let response_summary = ResponseSummary {
+        packet_count,
+        arp_count,
+        duration_ms: start_recording.elapsed().as_millis()
+    };
+    (response_summary, target_details)
 }
 
 /**

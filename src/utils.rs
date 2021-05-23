@@ -70,10 +70,10 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     println!("| IPv4            | MAC               | Hostname              |");
     println!("|-----------------|-------------------|-----------------------|");
 
-    for detail in target_details {
+    for detail in target_details.iter() {
 
-        let hostname = match detail.hostname {
-            Some(hostname) => hostname,
+        let hostname = match &detail.hostname {
+            Some(hostname) => hostname.clone(),
             None if !options.resolve_hostname => String::from("(disabled)"),
             None => String::from("")
         };
@@ -81,6 +81,16 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     }
 
     println!("");
+    print!("ARP scan finished, ");
+    let target_count = target_details.len();
+    match target_count {
+        0 => print!("no hosts found"),
+        1 => print!("1 host found"),
+        _ => print!("{} hosts found", target_count)
+    }
+    let seconds_duration = (response_summary.duration_ms as f32) / (1000 as f32);
+    println!(" in {:.3} seconds", seconds_duration);
+
     match response_summary.packet_count {
         0 => print!("No packets received, "),
         1 => print!("1 packet received, "),
