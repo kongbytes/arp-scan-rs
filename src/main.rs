@@ -99,7 +99,7 @@ fn main() {
             process::exit(1);
         }
     };
-    println!("Sending {} ARP requests to network ({}s timeout)", network_size, scan_options.timeout_seconds);
+    println!("Sending {} ARP requests to network (waiting at least {}s)", network_size, scan_options.timeout_seconds);
 
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
