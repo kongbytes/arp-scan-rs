@@ -1,6 +1,6 @@
 use pnet::datalink::{self, NetworkInterface};
 
-use crate::network::TargetDetails;
+use crate::network::{ResponseSummary, TargetDetails};
 use crate::args::ScanOptions;
 
 /**
@@ -62,23 +62,34 @@ pub fn select_default_interface() -> Option<NetworkInterface> {
  * Display the scan results on stdout with a table. The 'final_result' vector
  * contains all items that will be displayed.
  */
-pub fn display_scan_results(mut final_result: Vec<TargetDetails>, options: &ScanOptions) {
+pub fn display_scan_results(response_summary: ResponseSummary, mut target_details: Vec<TargetDetails>, options: &ScanOptions) {
 
-    final_result.sort_by_key(|item| item.ipv4);
+    target_details.sort_by_key(|item| item.ipv4);
 
     println!("");
     println!("| IPv4            | MAC               | Hostname              |");
     println!("|-----------------|-------------------|-----------------------|");
 
-    for result_item in final_result {
+    for detail in target_details {
 
-        let hostname = match result_item.hostname {
+        let hostname = match detail.hostname {
             Some(hostname) => hostname,
             None if !options.resolve_hostname => String::from("(disabled)"),
             None => String::from("")
         };
-        println!("| {: <15} | {: <18} | {: <21} |", result_item.ipv4, result_item.mac, hostname);
+        println!("| {: <15} | {: <18} | {: <21} |", detail.ipv4, detail.mac, hostname);
     }
 
+    println!("");
+    match response_summary.packet_count {
+        0 => print!("No packets received, "),
+        1 => print!("1 packet received, "),
+        _ => print!("{} packets received, ", response_summary.packet_count)
+    };
+    match response_summary.arp_count {
+        0 => println!("no ARP packets filtered"),
+        1 => println!("1 ARP packet filtered"),
+        _ => println!("{} ARP packets filtered", response_summary.arp_count)
+    };
     println!("");
 }

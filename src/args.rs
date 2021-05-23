@@ -8,10 +8,16 @@ const FIVE_HOURS: u64 = 5 * 60 * 60;
 const TIMEOUT_DEFAULT: u64 = 2;
 const HOST_RETRY_DEFAULT: usize = 1;
 
+const CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+/**
+ * This function groups together all exposed CLI arguments to the end-users
+ * with clap. Other CLI details (version, ...) should be grouped there as well.
+ */
 pub fn build_args<'a, 'b>() -> App<'a, 'b> {
 
     App::new("arp-scan")
-        .version("0.5.0")
+        .version(CLI_VERSION)
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
             Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface")
@@ -52,6 +58,11 @@ pub struct ScanOptions {
 
 impl ScanOptions {
     
+    /**
+     * Build a new 'ScanOptions' struct that will be used in the whole CLI such
+     * as the network level, the display details and more. The scan options reflect
+     * user requests for the CLI and should not be mutated.
+     */
     pub fn new(matches: &ArgMatches) -> Self {
 
         let interface_name = match matches.value_of("interface") {
