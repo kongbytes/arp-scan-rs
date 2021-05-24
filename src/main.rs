@@ -5,9 +5,11 @@ mod utils;
 use std::net::IpAddr;
 use std::process;
 use std::thread;
+use std::sync::Arc;
 
 use ipnetwork::NetworkSize;
 use pnet::datalink;
+use rand::prelude::*;
 
 use args::ScanOptions;
 
@@ -87,10 +89,8 @@ fn main() {
         }
     };
 
-    // The options are right now cloned, since they are moved in the response
-    // -catching thread, while also being used in the main thread after.
-    let cloned_options = scan_options.clone();
-    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, &cloned_options));
+    let cloned_options = Arc::clone(&scan_options);
+    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options));
 
     let network_size: u128 = match ip_network.size() {
         NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
@@ -104,10 +104,25 @@ fn main() {
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
     for _ in 0..scan_options.retry_count {
-        for ip_address in ip_network.iter() {
+
+        // The random approach has one major drawback, compared with the native
+        // network iterator exposed by 'ipnetwork': memory usage. Instead of
+        // using a small memory footprint iterator, we have to store all IP
+        // addresses in memory at once. This can cause problems on large ranges.
+        let ip_addresses: Vec<IpAddr> = match scan_options.randomize_targets {
+            true => {
+                let mut rng = rand::thread_rng();
+                let mut shuffled_addresses: Vec<IpAddr> = ip_network.iter().collect();
+                shuffled_addresses.shuffle(&mut rng);
+                shuffled_addresses
+            },
+            false => ip_network.iter().collect()
+        };
+
+        for ip_address in ip_addresses {
 
             if let IpAddr::V4(ipv4_address) = ip_address {
-                network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, &scan_options);
+                network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, Arc::clone(&scan_options));
             }
         }
     }

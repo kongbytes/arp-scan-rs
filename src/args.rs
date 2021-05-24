@@ -1,5 +1,6 @@
 use std::net::Ipv4Addr;
 use std::process;
+use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
 use pnet::datalink::MacAddr;
@@ -41,11 +42,13 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("retry_count").short("r").long("retry").takes_value(true).value_name("RETRY_COUNT").help("Host retry attempt count")
         )
         .arg(
+            Arg::with_name("random").short("R").long("random").takes_value(false).help("Randomize the target list")
+        )
+        .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
 }
 
-#[derive(Clone)]
 pub struct ScanOptions {
     pub interface_name: String,
     pub timeout_seconds: u64,
@@ -53,7 +56,8 @@ pub struct ScanOptions {
     pub source_ipv4: Option<Ipv4Addr>,
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
-    pub retry_count: usize
+    pub retry_count: usize,
+    pub randomize_targets: bool
 }
 
 impl ScanOptions {
@@ -63,7 +67,7 @@ impl ScanOptions {
      * as the network level, the display details and more. The scan options reflect
      * user requests for the CLI and should not be mutated.
      */
-    pub fn new(matches: &ArgMatches) -> Self {
+    pub fn new(matches: &ArgMatches) -> Arc<Self> {
 
         let interface_name = match matches.value_of("interface") {
             Some(name) => String::from(name),
@@ -150,16 +154,19 @@ impl ScanOptions {
             },
             None => HOST_RETRY_DEFAULT
         };
+
+        let randomize_targets = matches.is_present("random");
     
-        ScanOptions {
+        Arc::new(ScanOptions {
             interface_name,
             timeout_seconds,
             resolve_hostname,
             source_ipv4,
             destination_mac,
             vlan_id,
-            retry_count
-        }
+            retry_count,
+            randomize_targets
+        })
     }
 
 }
