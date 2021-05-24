@@ -85,6 +85,21 @@ Add a 802.1Q field in the Ethernet frame. This fields contains the given VLAN ID
 
 Display the ARP scan CLI version and exits the process.
 
+## Roadmap
+
+The features below will be shipped in the next releases of the project.
+
+- Make ARP scans faster
+    - with a per-host retry approach
+    - by closing the response thread faster
+- Scan profiles (standard, attacker, light, ...)
+- Complete VLAN support
+- Exports (JSON, CSV, YAML, ...)
+- Full ARP packet customization (Ethernet protocol, ARP operation, ...)
+- MAC vendor lookup in the results
+- Fine-grained scan timings (interval, ...)
+- Wide network range support
+
 ## Contributing
 
 Feel free to suggest an improvement, report a bug, or ask something: https://github.com/saluki/arp-scan-rs/issues
