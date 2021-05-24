@@ -2,8 +2,9 @@ use std::process;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 use std::collections::HashMap;
-use dns_lookup::lookup_addr;
+use std::sync::Arc;
 
+use dns_lookup::lookup_addr;
 use ipnetwork::IpNetwork;
 use pnet::datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver};
 use pnet::packet::{MutablePacket, Packet};
@@ -46,7 +47,7 @@ pub struct TargetDetails {
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, ip_network: &IpNetwork, target_ip: Ipv4Addr, options: &ScanOptions) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, ip_network: &IpNetwork, target_ip: Ipv4Addr, options: Arc<ScanOptions>) {
 
     let mut ethernet_buffer = match options.vlan_id {
         Some(_) => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
@@ -142,7 +143,7 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: &ScanOptions) -> (ResponseSummary, Vec<TargetDetails>) {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>) -> (ResponseSummary, Vec<TargetDetails>) {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
