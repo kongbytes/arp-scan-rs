@@ -18,7 +18,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.5.0/arp-scan-v0.5.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.6.0/arp-scan-v0.6.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -72,6 +72,10 @@ Change or force the IPv4 address sent as source in the broadcasted ARP packets. 
 #### Change destination MAC `-M 55:44:33:22:11:00`
 
 Change or force the MAC address sent as destination ARP request. By default, a broadcast destination (`00:00:00:00:00:00`) will be set.
+
+#### Randomize target list `-R`
+
+Randomize the IPv4 target list before sending ARP requests. By default, all ARP requests are sent in ascending order by IPv4 address.
 
 #### Set VLAN ID `-Q 540`
 

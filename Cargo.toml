@@ -2,7 +2,7 @@
 name = "arp-scan"
 description = "A minimalistic ARP scan tool"
 license = "AGPL-3.0-or-later"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Saluki"]
 edition = "2018"
 readme = "README.md"
@@ -16,3 +16,4 @@ pnet = "0.28.0"
 ipnetwork = "0.18.0"
 clap = "2.33.3"
 dns-lookup = "1.0.6"
+rand = "0.8.3"
