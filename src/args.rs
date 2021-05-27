@@ -47,6 +47,14 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
         .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
+        .arg(
+            Arg::with_name("output").short("o").long("output").takes_value(true).value_name("FORMAT").help("Define output format")
+        )
+}
+
+pub enum OutputFormat {
+    Plain,
+    Json
 }
 
 pub struct ScanOptions {
@@ -57,7 +65,8 @@ pub struct ScanOptions {
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
     pub retry_count: usize,
-    pub randomize_targets: bool
+    pub randomize_targets: bool,
+    pub output: OutputFormat
 }
 
 impl ScanOptions {
@@ -155,6 +164,21 @@ impl ScanOptions {
             None => HOST_RETRY_DEFAULT
         };
 
+        let output = match matches.value_of("output") {
+            Some(output_request) => {
+
+                match output_request {
+                    "json" => OutputFormat::Json,
+                    "plain" | "text" => OutputFormat::Plain,
+                    _ => {
+                        eprintln!("Expected correct output format (json/plain)");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => OutputFormat::Plain
+        };
+
         let randomize_targets = matches.is_present("random");
     
         Arc::new(ScanOptions {
@@ -165,8 +189,17 @@ impl ScanOptions {
             destination_mac,
             vlan_id,
             retry_count,
-            randomize_targets
+            randomize_targets,
+            output
         })
+    }
+
+    pub fn is_plain_output(&self) -> bool {
+
+        match &self.output {
+            OutputFormat::Plain => true,
+            _ => false
+        }
     }
 
 }
