@@ -2,7 +2,7 @@
 name = "arp-scan"
 description = "A minimalistic ARP scan tool"
 license = "AGPL-3.0-or-later"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Saluki"]
 edition = "2018"
 readme = "README.md"
@@ -17,6 +17,6 @@ ipnetwork = "0.18.0"
 clap = "2.33.3"
 dns-lookup = "1.0.6"
 rand = "0.8.3"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.8"
+serde = { version = "1.0.126", features = ["derive"] }
+serde_json = "1.0.64"
+serde_yaml = "0.8.17"
