@@ -18,7 +18,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.6.0/arp-scan-v0.6.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.7.0/arp-scan-v0.7.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -37,6 +37,12 @@ Enhance the minimum scan timeout to 5 seconds (by default, 2 seconds).
 
 ```bash
 ./arp-scan -i wlp1s0 -t 5
+```
+
+Perform an ARP scan on the default network interface, VLAN 45 and JSON output.
+
+```bash
+./arp-scan -Q 45 -o json
 ```
 
 ## Options
@@ -81,6 +87,10 @@ Randomize the IPv4 target list before sending ARP requests. By default, all ARP 
 
 Add a 802.1Q field in the Ethernet frame. This fields contains the given VLAN ID for outgoing ARP requests. By default, the Ethernet frame is sent without 802.1Q fields (no VLAN).
 
+#### Set output format `-o json`
+
+Set the output format to either `plain` (a full-text output with tables), `json` or `yaml`.
+
 #### Show version `--version`
 
 Display the ARP scan CLI version and exits the process.
@@ -94,7 +104,7 @@ The features below will be shipped in the next releases of the project.
     - by closing the response thread faster
 - Scan profiles (standard, attacker, light, ...)
 - Complete VLAN support
-- Exports (JSON, CSV, YAML, ...)
+- ~~Exports (JSON & YAML)~~ - released in 0.7.0
 - Full ARP packet customization (Ethernet protocol, ARP operation, ...)
 - MAC vendor lookup in the results
 - Fine-grained scan timings (interval, ...)
