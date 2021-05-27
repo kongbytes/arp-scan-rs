@@ -140,6 +140,7 @@ fn main() {
 
     match &scan_options.output {
         OutputFormat::Plain => utils::display_scan_results(response_summary, target_details, &scan_options),
-        OutputFormat::Json => println!("{}", utils::export_to_json(response_summary, target_details))
+        OutputFormat::Json => println!("{}", utils::export_to_json(response_summary, target_details)),
+        OutputFormat::Yaml => println!("{}", utils::export_to_yaml(response_summary, target_details))
     }
 }
