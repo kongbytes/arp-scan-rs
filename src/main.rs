@@ -11,7 +11,7 @@ use ipnetwork::NetworkSize;
 use pnet::datalink;
 use rand::prelude::*;
 
-use args::ScanOptions;
+use args::{ScanOptions, OutputFormat};
 
 fn main() {
 
@@ -62,13 +62,16 @@ fn main() {
         }
     };
 
-    println!("");
-    println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
-    if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
-        println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
-    }
-    if let Some(forced_destination_mac) = scan_options.destination_mac {
-        println!("The ARP destination MAC will be forced to {}", forced_destination_mac);
+    if scan_options.is_plain_output() {
+
+        println!("");
+        println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
+        if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
+            println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
+        }
+        if let Some(forced_destination_mac) = scan_options.destination_mac {
+            println!("The ARP destination MAC will be forced to {}", forced_destination_mac);
+        }
     }
 
     // Start ARP scan operation
@@ -99,7 +102,10 @@ fn main() {
             process::exit(1);
         }
     };
-    println!("Sending {} ARP requests to network (waiting at least {}s)", network_size, scan_options.timeout_seconds);
+
+    if scan_options.is_plain_output() {
+        println!("Sending {} ARP requests to network (waiting at least {}s)", network_size, scan_options.timeout_seconds);
+    }
 
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
@@ -132,5 +138,8 @@ fn main() {
         process::exit(1);
     });
 
-    utils::display_scan_results(response_summary, target_details, &scan_options);
+    match &scan_options.output {
+        OutputFormat::Plain => utils::display_scan_results(response_summary, target_details, &scan_options),
+        OutputFormat::Json => println!("{}", utils::export_to_json(response_summary, target_details))
+    }
 }

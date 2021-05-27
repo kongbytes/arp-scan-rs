@@ -1,4 +1,5 @@
 use pnet::datalink::{self, NetworkInterface};
+use serde::Serialize;
 
 use crate::network::{ResponseSummary, TargetDetails};
 use crate::args::ScanOptions;
@@ -102,4 +103,53 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         _ => println!("{} ARP packets filtered", response_summary.arp_count)
     };
     println!("");
+}
+
+#[derive(Serialize)]
+struct JsonResultItem {
+    ipv4: String,
+    mac: String,
+    hostname: String
+}
+
+#[derive(Serialize)]
+struct JsonGlobalResult {
+    packet_count: usize,
+    arp_count: usize,
+    duration_ms: u128,
+    results: Vec<JsonResultItem>
+}
+
+/**
+ * Export the scan results as a JSON string with response details (timings, ...)
+ * and ARP results from the local network.
+ */
+pub fn export_to_json(response_summary: ResponseSummary, mut target_details: Vec<TargetDetails>) -> String {
+
+    target_details.sort_by_key(|item| item.ipv4);
+
+    let exportable_results: Vec<JsonResultItem> = target_details.into_iter()
+        .map(|detail| {
+
+            let hostname = match &detail.hostname {
+                Some(hostname) => hostname.clone(),
+                None => String::from("")
+            };
+
+            JsonResultItem {
+                ipv4: format!("{}", detail.ipv4),
+                mac: format!("{}", detail.mac),
+                hostname
+            }
+        })
+        .collect();
+
+    let global_result = JsonGlobalResult {
+        packet_count: response_summary.packet_count,
+        arp_count: response_summary.arp_count,
+        duration_ms: response_summary.duration_ms,
+        results: exportable_results
+    };
+
+    serde_json::to_string(&global_result).unwrap()
 }
