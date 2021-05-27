@@ -54,7 +54,8 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
 
 pub enum OutputFormat {
     Plain,
-    Json
+    Json,
+    Yaml
 }
 
 pub struct ScanOptions {
@@ -169,9 +170,10 @@ impl ScanOptions {
 
                 match output_request {
                     "json" => OutputFormat::Json,
+                    "yaml" => OutputFormat::Yaml,
                     "plain" | "text" => OutputFormat::Plain,
                     _ => {
-                        eprintln!("Expected correct output format (json/plain)");
+                        eprintln!("Expected correct output format (json/yaml/plain)");
                         process::exit(1);
                     }
                 }

@@ -106,18 +106,44 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
 }
 
 #[derive(Serialize)]
-struct JsonResultItem {
+struct SerializableResultItem {
     ipv4: String,
     mac: String,
     hostname: String
 }
 
 #[derive(Serialize)]
-struct JsonGlobalResult {
+struct SerializableGlobalResult {
     packet_count: usize,
     arp_count: usize,
     duration_ms: u128,
-    results: Vec<JsonResultItem>
+    results: Vec<SerializableResultItem>
+}
+
+fn get_serializable_result(response_summary: ResponseSummary, target_details: Vec<TargetDetails>) -> SerializableGlobalResult {
+
+    let exportable_results: Vec<SerializableResultItem> = target_details.into_iter()
+        .map(|detail| {
+
+            let hostname = match &detail.hostname {
+                Some(hostname) => hostname.clone(),
+                None => String::from("")
+            };
+
+            SerializableResultItem {
+                ipv4: format!("{}", detail.ipv4),
+                mac: format!("{}", detail.mac),
+                hostname
+            }
+        })
+        .collect();
+
+    SerializableGlobalResult {
+        packet_count: response_summary.packet_count,
+        arp_count: response_summary.arp_count,
+        duration_ms: response_summary.duration_ms,
+        results: exportable_results
+    }
 }
 
 /**
@@ -128,28 +154,20 @@ pub fn export_to_json(response_summary: ResponseSummary, mut target_details: Vec
 
     target_details.sort_by_key(|item| item.ipv4);
 
-    let exportable_results: Vec<JsonResultItem> = target_details.into_iter()
-        .map(|detail| {
-
-            let hostname = match &detail.hostname {
-                Some(hostname) => hostname.clone(),
-                None => String::from("")
-            };
-
-            JsonResultItem {
-                ipv4: format!("{}", detail.ipv4),
-                mac: format!("{}", detail.mac),
-                hostname
-            }
-        })
-        .collect();
-
-    let global_result = JsonGlobalResult {
-        packet_count: response_summary.packet_count,
-        arp_count: response_summary.arp_count,
-        duration_ms: response_summary.duration_ms,
-        results: exportable_results
-    };
+    let global_result = get_serializable_result(response_summary, target_details);
 
     serde_json::to_string(&global_result).unwrap()
+}
+
+/**
+ * Export the scan results as a YAML string with response details (timings, ...)
+ * and ARP results from the local network.
+ */
+pub fn export_to_yaml(response_summary: ResponseSummary, mut target_details: Vec<TargetDetails>) -> String {
+
+    target_details.sort_by_key(|item| item.ipv4);
+
+    let global_result = get_serializable_result(response_summary, target_details);
+
+    serde_yaml::to_string(&global_result).unwrap()
 }
