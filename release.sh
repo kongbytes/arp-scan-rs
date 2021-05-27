@@ -6,7 +6,7 @@
 mkdir -p ./builds
 rm ./builds/*
 
-CLI_VERSION=$(/usr/bin/cat Cargo.toml | egrep "version = (.*)" | egrep -o --color=never "([0-9]+\.?){3}")
+CLI_VERSION=$(/usr/bin/cat Cargo.toml | egrep "version = (.*)" | egrep -o --color=never "([0-9]+\.?){3}" | head -n 1)
 echo "Releasing v$CLI_VERSION for GNU & musl targets"
 
 # Build a 'musl' release for Linux x86_64
