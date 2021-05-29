@@ -6,6 +6,7 @@ use std::net::IpAddr;
 use std::process;
 use std::thread;
 use std::sync::Arc;
+use std::time::Duration;
 
 use ipnetwork::NetworkSize;
 use pnet::datalink;
@@ -80,7 +81,10 @@ fn main() {
     // while the main thread sends a batch of ARP requests for each IP in the
     // local network.
 
-    let (mut tx, mut rx) = match datalink::channel(selected_interface, Default::default()) {
+    let mut channel_config = datalink::Config::default();
+    channel_config.read_timeout = Some(Duration::from_millis(500));
+
+    let (mut tx, mut rx) = match datalink::channel(selected_interface, channel_config) {
         Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => {
             eprintln!("Expected an Ethernet datalink channel");

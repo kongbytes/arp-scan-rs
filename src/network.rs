@@ -3,6 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::io::ErrorKind::TimedOut;
 
 use dns_lookup::lookup_addr;
 use ipnetwork::IpNetwork;
@@ -156,11 +157,19 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
         if start_recording.elapsed().as_secs() > options.timeout_seconds {
             break;
         }
-        
-        let arp_buffer = rx.next().unwrap_or_else(|error| {
-            eprintln!("Failed to receive ARP requests ({})", error);
-            process::exit(1);
-        });
+
+        let arp_buffer = match rx.next() {
+            Ok(buffer) => buffer,
+            Err(error) => {
+                match error.kind() {
+                    TimedOut => continue,
+                    _ => {
+                        eprintln!("Failed to receive ARP requests ({})", error);
+                        process::exit(1);
+                    }
+                };
+            }
+        };
         packet_count += 1;
         
         let ethernet_packet = match EthernetPacket::new(&arp_buffer[..]) {
