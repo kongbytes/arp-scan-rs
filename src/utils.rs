@@ -9,7 +9,7 @@ use crate::args::ScanOptions;
  * user. This approach only supports Linux-like systems (Ubuntu, Fedore, ...).
  */
 pub fn is_root_user() -> bool {
-    std::env::var("USER").unwrap_or(String::from("")) == String::from("root")
+    std::env::var("USER").unwrap_or_else(|_| String::from("")) == *"root"
 }
 
 /**
@@ -17,7 +17,7 @@ pub fn is_root_user() -> bool {
  * technical details. The goal is to present the most useful technical details
  * to pick the right network interface for scans.
  */
-pub fn show_interfaces(interfaces: &Vec<NetworkInterface>) {
+pub fn show_interfaces(interfaces: &[NetworkInterface]) {
 
     for interface in interfaces.iter() {
         let up_text = match interface.is_up() {
@@ -42,16 +42,16 @@ pub fn select_default_interface() -> Option<NetworkInterface> {
 
     interfaces.into_iter().find(|interface| {
 
-        if let None = interface.mac {
+        if interface.mac.is_none() {
             return false;
         }
 
-        if interface.ips.len() == 0 || !interface.is_up() || interface.is_loopback() {
+        if interface.ips.is_empty() || !interface.is_up() || interface.is_loopback() {
             return false;
         }
 
         let potential_ipv4 = interface.ips.iter().find(|ip| ip.is_ipv4());
-        if let None = potential_ipv4 {
+        if potential_ipv4.is_none() {
             return false;
         }
 
@@ -67,7 +67,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
 
     target_details.sort_by_key(|item| item.ipv4);
 
-    println!("");
+    println!();
     println!("| IPv4            | MAC               | Hostname              |");
     println!("|-----------------|-------------------|-----------------------|");
 
@@ -81,7 +81,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         println!("| {: <15} | {: <18} | {: <21} |", detail.ipv4, detail.mac, hostname);
     }
 
-    println!("");
+    println!();
     print!("ARP scan finished, ");
     let target_count = target_details.len();
     match target_count {
@@ -89,7 +89,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         1 => print!("1 host found"),
         _ => print!("{} hosts found", target_count)
     }
-    let seconds_duration = (response_summary.duration_ms as f32) / (1000 as f32);
+    let seconds_duration = (response_summary.duration_ms as f32) / (1000_f32);
     println!(" in {:.3} seconds", seconds_duration);
 
     match response_summary.packet_count {
@@ -102,7 +102,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         1 => println!("1 ARP packet filtered"),
         _ => println!("{} ARP packets filtered", response_summary.arp_count)
     };
-    println!("");
+    println!();
 }
 
 #[derive(Serialize)]

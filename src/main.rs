@@ -5,8 +5,9 @@ mod utils;
 use std::net::IpAddr;
 use std::process;
 use std::thread;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use ipnetwork::NetworkSize;
 use pnet::datalink;
@@ -65,7 +66,7 @@ fn main() {
 
     if scan_options.is_plain_output() {
 
-        println!("");
+        println!();
         println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
         if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
             println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
@@ -81,8 +82,10 @@ fn main() {
     // while the main thread sends a batch of ARP requests for each IP in the
     // local network.
 
-    let mut channel_config = datalink::Config::default();
-    channel_config.read_timeout = Some(Duration::from_millis(500));
+    let channel_config = datalink::Config {
+        read_timeout: Some(Duration::from_millis(500)), 
+        ..datalink::Config::default()
+    };
 
     let (mut tx, mut rx) = match datalink::channel(selected_interface, channel_config) {
         Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
@@ -99,7 +102,7 @@ fn main() {
     // The 'timed_out' mutex is shared accross the main thread (which performs
     // ARP packet sending) and the response thread (which receives and stores
     // all ARP responses).
-    let timed_out = Arc::new(Mutex::new(false));
+    let timed_out = Arc::new(AtomicBool::new(false));
     let cloned_timed_out = Arc::clone(&timed_out);
 
     let cloned_options = Arc::clone(&scan_options);
@@ -148,10 +151,7 @@ fn main() {
     // (where T is the timeout option). After the sleep phase, the response
     // thread will receive a stop request through the 'timed_out' mutex.
     thread::sleep(Duration::from_secs(scan_options.timeout_seconds));
-    {
-        let mut locked_timed_out = timed_out.lock().unwrap();
-        *locked_timed_out = true;
-    }
+    timed_out.store(true, Ordering::Relaxed);
 
     let (response_summary, target_details) = arp_responses.join().unwrap_or_else(|error| {
         eprintln!("Failed to close receive thread ({:?})", error);
