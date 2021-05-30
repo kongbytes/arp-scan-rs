@@ -20,3 +20,5 @@ cp -p ./target/x86_64-unknown-linux-gnu/release/arp-scan ./builds/arp-scan-v$CLI
 ./builds/arp-scan-v$CLI_VERSION-x86_64-unknown-linux-glibc --version
 
 echo "Update the README instructions for v$CLI_VERSION"
+echo " ✓ Publish on crates.io"
+echo " ✓ Release on Github with Git tag v$CLI_VERSION"
