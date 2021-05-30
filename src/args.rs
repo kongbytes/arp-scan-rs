@@ -10,7 +10,7 @@ const TIMEOUT_DEFAULT: u64 = 2;
 const HOST_RETRY_DEFAULT: usize = 1;
 const REQUEST_MS_INTERVAL: u64 = 10;
 
-const CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /**
  * This function groups together all exposed CLI arguments to the end-users
@@ -90,7 +90,7 @@ impl ScanOptions {
     
                 match super::utils::select_default_interface() {
                     Some(default_interface) => {
-                        String::from(default_interface.name)
+                        default_interface.name
                     },
                     None => {
                         eprintln!("Network interface name required");
@@ -218,10 +218,7 @@ impl ScanOptions {
 
     pub fn is_plain_output(&self) -> bool {
 
-        match &self.output {
-            OutputFormat::Plain => true,
-            _ => false
-        }
+        matches!(&self.output, OutputFormat::Plain)
     }
 
 }

@@ -2,7 +2,8 @@ use std::process;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::ErrorKind::TimedOut;
 
 use dns_lookup::lookup_addr;
@@ -144,7 +145,7 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<Mutex<bool>>) -> (ResponseSummary, Vec<TargetDetails>) {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<AtomicBool>) -> (ResponseSummary, Vec<TargetDetails>) {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
@@ -154,15 +155,8 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
 
     loop {
 
-        {
-            let is_timed_out = timed_out.lock().unwrap_or_else(|err| {
-                eprintln!("Could not lock time-out mutex ({})", err);
-                process::exit(1);
-            });
-            
-            if *is_timed_out == true {
-                break;
-            }
+        if timed_out.load(Ordering::Relaxed) {
+            break;
         }
 
         let arp_buffer = match rx.next() {
@@ -187,12 +181,8 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
             None => continue
         };
 
-        let is_arp = match ethernet_packet.get_ethertype() {
-            EtherTypes::Arp => true,
-            _ => false
-        };
-
-        if !is_arp {
+        let is_arp_type = matches!(ethernet_packet.get_ethertype(), EtherTypes::Arp);
+        if !is_arp_type {
             continue;
         }
 
@@ -242,7 +232,7 @@ fn find_hostname(ipv4: Ipv4Addr) -> Option<String> {
 
             // The 'lookup_addr' function returns an IP address if no hostname
             // was found. If this is the case, we prefer switching to None.
-            if let Ok(_) = hostname.parse::<IpAddr>() {
+            if hostname.parse::<IpAddr>().is_ok() {
                 return None; 
             }
 
