@@ -68,17 +68,21 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     target_details.sort_by_key(|item| item.ipv4);
 
     println!();
-    println!("| IPv4            | MAC               | Hostname              |");
-    println!("|-----------------|-------------------|-----------------------|");
+    println!("| IPv4            | MAC               | Hostname              | Vendor                     |");
+    println!("|-----------------|-------------------|-----------------------|----------------------------|");
 
     for detail in target_details.iter() {
 
-        let hostname = match &detail.hostname {
-            Some(hostname) => hostname.clone(),
-            None if !options.resolve_hostname => String::from("(disabled)"),
-            None => String::from("")
+        let hostname: &str = match &detail.hostname {
+            Some(hostname) => &hostname,
+            None if !options.resolve_hostname => &"(disabled)",
+            None => &""
         };
-        println!("| {: <15} | {: <18} | {: <21} |", detail.ipv4, detail.mac, hostname);
+        let vendor: &str = match &detail.vendor {
+            Some(vendor) => &vendor,
+            None => &""
+        };
+        println!("| {: <15} | {: <18} | {: <21} | {: <26} |", detail.ipv4, detail.mac, hostname, vendor);
     }
 
     println!();
@@ -109,7 +113,8 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
 struct SerializableResultItem {
     ipv4: String,
     mac: String,
-    hostname: String
+    hostname: String,
+    vendor: String
 }
 
 #[derive(Serialize)]
@@ -130,10 +135,16 @@ fn get_serializable_result(response_summary: ResponseSummary, target_details: Ve
                 None => String::from("")
             };
 
+            let vendor = match &detail.vendor {
+                Some(vendor) => vendor.clone(),
+                None => String::from("")
+            };
+
             SerializableResultItem {
                 ipv4: format!("{}", detail.ipv4),
                 mac: format!("{}", detail.mac),
-                hostname
+                hostname,
+                vendor
             }
         })
         .collect();

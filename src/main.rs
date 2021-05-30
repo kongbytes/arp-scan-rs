@@ -1,6 +1,7 @@
 mod args;
 mod network;
 mod utils;
+mod vendor;
 
 use std::net::IpAddr;
 use std::process;
@@ -13,7 +14,8 @@ use ipnetwork::NetworkSize;
 use pnet::datalink;
 use rand::prelude::*;
 
-use args::{ScanOptions, OutputFormat};
+use crate::args::{ScanOptions, OutputFormat};
+use crate::vendor::Vendor;
 
 fn main() {
 
@@ -105,8 +107,10 @@ fn main() {
     let timed_out = Arc::new(AtomicBool::new(false));
     let cloned_timed_out = Arc::clone(&timed_out);
 
+    let mut vendor_list = Vendor::new();
+
     let cloned_options = Arc::clone(&scan_options);
-    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out));
+    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out, &mut vendor_list));
 
     let network_size: u128 = match ip_network.size() {
         NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
