@@ -2,7 +2,7 @@ use std::process;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::io::ErrorKind::TimedOut;
 
 use dns_lookup::lookup_addr;
@@ -144,7 +144,7 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>) -> (ResponseSummary, Vec<TargetDetails>) {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<Mutex<bool>>) -> (ResponseSummary, Vec<TargetDetails>) {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
@@ -154,14 +154,24 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
 
     loop {
 
-        if start_recording.elapsed().as_secs() > options.timeout_seconds {
-            break;
+        {
+            let is_timed_out = timed_out.lock().unwrap_or_else(|err| {
+                eprintln!("Could not lock time-out mutex ({})", err);
+                process::exit(1);
+            });
+            
+            if *is_timed_out == true {
+                break;
+            }
         }
 
         let arp_buffer = match rx.next() {
             Ok(buffer) => buffer,
             Err(error) => {
                 match error.kind() {
+                    // The 'next' call will only block the thread for a given
+                    // amount of microseconds. The goal is to avoid long blocks
+                    // due to the lack of packets received.
                     TimedOut => continue,
                     _ => {
                         eprintln!("Failed to receive ARP requests ({})", error);
