@@ -15,6 +15,7 @@ use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPa
 use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
 
 use crate::args::ScanOptions;
+use crate::vendor::Vendor;
 
 const VLAN_QOS_DEFAULT: u8 = 1;
 const ARP_PACKET_SIZE: usize = 28;
@@ -41,7 +42,8 @@ pub struct ResponseSummary {
 pub struct TargetDetails {
     pub ipv4: Ipv4Addr,
     pub mac: MacAddr,
-    pub hostname: Option<String>
+    pub hostname: Option<String>,
+    pub vendor: Option<String>
 }
 
 /**
@@ -145,7 +147,7 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * when the N seconds are elapsed, the receiver loop will therefore only stop
  * on the next received frame.
  */
-pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<AtomicBool>) -> (ResponseSummary, Vec<TargetDetails>) {
+pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<AtomicBool>, vendor_list: &mut Vendor) -> (ResponseSummary, Vec<TargetDetails>) {
 
     let mut discover_map: HashMap<Ipv4Addr, TargetDetails> = HashMap::new();
     let start_recording = Instant::now();
@@ -197,7 +199,8 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
             discover_map.insert(sender_ipv4, TargetDetails {
                 ipv4: sender_ipv4,
                 mac: sender_mac,
-                hostname: None
+                hostname: None,
+                vendor: None
             });
         }
     }
@@ -206,6 +209,10 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
 
         if options.resolve_hostname {
             target_detail.hostname = find_hostname(target_detail.ipv4);
+        }
+
+        if vendor_list.has_vendor_db() {
+            target_detail.vendor = vendor_list.search_by_mac(&target_detail.mac);
         }
 
         target_detail
