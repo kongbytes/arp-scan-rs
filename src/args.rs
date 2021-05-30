@@ -8,6 +8,7 @@ use pnet::datalink::MacAddr;
 const FIVE_HOURS: u64 = 5 * 60 * 60; 
 const TIMEOUT_DEFAULT: u64 = 2;
 const HOST_RETRY_DEFAULT: usize = 1;
+const REQUEST_MS_INTERVAL: u64 = 10;
 
 const CLI_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -45,6 +46,9 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("random").short("R").long("random").takes_value(false).help("Randomize the target list")
         )
         .arg(
+            Arg::with_name("interval").short("I").long("interval").takes_value(true).value_name("MS_INTERVAL").help("Milliseconds between ARP requests")
+        )
+        .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
         .arg(
@@ -66,6 +70,7 @@ pub struct ScanOptions {
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
     pub retry_count: usize,
+    pub interval: u64,
     pub randomize_targets: bool,
     pub output: OutputFormat
 }
@@ -165,6 +170,20 @@ impl ScanOptions {
             None => HOST_RETRY_DEFAULT
         };
 
+        let interval = match matches.value_of("interval") {
+            Some(interval_text) => {
+    
+                match interval_text.parse::<u64>() {
+                    Ok(interval_number) => interval_number,
+                    Err(_) => {
+                        eprintln!("Expected positive interval");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => REQUEST_MS_INTERVAL
+        };
+
         let output = match matches.value_of("output") {
             Some(output_request) => {
 
@@ -191,6 +210,7 @@ impl ScanOptions {
             destination_mac,
             vlan_id,
             retry_count,
+            interval,
             randomize_targets,
             output
         })

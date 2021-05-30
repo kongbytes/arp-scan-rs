@@ -5,7 +5,7 @@ mod utils;
 use std::net::IpAddr;
 use std::process;
 use std::thread;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use ipnetwork::NetworkSize;
@@ -96,8 +96,14 @@ fn main() {
         }
     };
 
+    // The 'timed_out' mutex is shared accross the main thread (which performs
+    // ARP packet sending) and the response thread (which receives and stores
+    // all ARP responses).
+    let timed_out = Arc::new(Mutex::new(false));
+    let cloned_timed_out = Arc::clone(&timed_out);
+
     let cloned_options = Arc::clone(&scan_options);
-    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options));
+    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out));
 
     let network_size: u128 = match ip_network.size() {
         NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
@@ -108,7 +114,7 @@ fn main() {
     };
 
     if scan_options.is_plain_output() {
-        println!("Sending {} ARP requests to network (waiting at least {}s)", network_size, scan_options.timeout_seconds);
+        println!("Sending {} ARP requests (waiting at least {}s, {}ms request interval)", network_size, scan_options.timeout_seconds, scan_options.interval);
     }
 
     // The retry count does right now use a 'brute-force' strategy without
@@ -133,8 +139,18 @@ fn main() {
 
             if let IpAddr::V4(ipv4_address) = ip_address {
                 network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, Arc::clone(&scan_options));
+                thread::sleep(Duration::from_millis(scan_options.interval));
             }
         }
+    }
+
+    // Once the ARP packets are sent, the main thread will sleep for T seconds
+    // (where T is the timeout option). After the sleep phase, the response
+    // thread will receive a stop request through the 'timed_out' mutex.
+    thread::sleep(Duration::from_secs(scan_options.timeout_seconds));
+    {
+        let mut locked_timed_out = timed_out.lock().unwrap();
+        *locked_timed_out = true;
     }
 
     let (response_summary, target_details) = arp_responses.join().unwrap_or_else(|error| {
