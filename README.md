@@ -5,20 +5,18 @@
 
 Find all hosts in your local network using this fast ARP scanner. The CLI is written in Rust and provides a minimal scanner that finds all hosts using the ARP protocol. Inspired by the awesome [arp-scan project](https://github.com/royhills/arp-scan).
 
-:heavy_check_mark: Minimal Rust binary
+:heavy_check_mark: Minimal Rust binary & fast ARP scans
 
-:heavy_check_mark: Fast ARP scans
+:heavy_check_mark: Scan customization (ARP, timings, interface, DNS, ...)
 
-:heavy_check_mark: Scan customization (timeout, interface, DNS, ...)
-
-:heavy_check_mark: Force ARP source IP
+:heavy_check_mark: JSON & YAML exports
 
 ## Getting started
 
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.7.0/arp-scan-v0.7.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.8.0/arp-scan-v0.8.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -63,6 +61,10 @@ Perform a scan on the network interface `eth0`. The first valid IPv4 network on 
 
 Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2`.
 
+#### Change ARP request interval `-I 30`
+
+By default, a 10ms gap will be set between ARP requests to avoid an ARP storm on the network. This value can be changed to reduce or increase the milliseconds between each ARP request.
+
 #### Numeric mode `-n`
 
 Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
@@ -101,13 +103,13 @@ The features below will be shipped in the next releases of the project.
 
 - Make ARP scans faster
     - with a per-host retry approach
-    - by closing the response thread faster
+    - ~~by closing the response thread faster~~  - released in 0.8.0
 - Scan profiles (standard, attacker, light, ...)
 - Complete VLAN support
 - ~~Exports (JSON & YAML)~~ - released in 0.7.0
 - Full ARP packet customization (Ethernet protocol, ARP operation, ...)
 - MAC vendor lookup in the results
-- Fine-grained scan timings (interval, ...)
+- ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
 - Wide network range support
 
 ## Contributing
