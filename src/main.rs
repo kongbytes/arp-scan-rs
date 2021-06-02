@@ -18,7 +18,7 @@ use crate::args::{ScanOptions, OutputFormat};
 use crate::vendor::Vendor;
 
 fn main() {
-
+    
     let matches = args::build_args().get_matches();
 
     // Find interfaces & list them if requested
@@ -121,7 +121,7 @@ fn main() {
     };
 
     if scan_options.is_plain_output() {
-        println!("Sending {} ARP requests (waiting at least {}s, {}ms request interval)", network_size, scan_options.timeout_seconds, scan_options.interval);
+        println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }
 
     // The retry count does right now use a 'brute-force' strategy without
@@ -146,7 +146,7 @@ fn main() {
 
             if let IpAddr::V4(ipv4_address) = ip_address {
                 network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, Arc::clone(&scan_options));
-                thread::sleep(Duration::from_millis(scan_options.interval));
+                thread::sleep(Duration::from_millis(scan_options.interval_ms));
             }
         }
     }
@@ -154,7 +154,7 @@ fn main() {
     // Once the ARP packets are sent, the main thread will sleep for T seconds
     // (where T is the timeout option). After the sleep phase, the response
     // thread will receive a stop request through the 'timed_out' mutex.
-    thread::sleep(Duration::from_secs(scan_options.timeout_seconds));
+    thread::sleep(Duration::from_millis(scan_options.timeout_ms));
     timed_out.store(true, Ordering::Relaxed);
 
     let (response_summary, target_details) = arp_responses.join().unwrap_or_else(|error| {
