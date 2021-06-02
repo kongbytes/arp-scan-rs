@@ -68,8 +68,8 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     target_details.sort_by_key(|item| item.ipv4);
 
     println!();
-    println!("| IPv4            | MAC               | Hostname              | Vendor                     |");
-    println!("|-----------------|-------------------|-----------------------|----------------------------|");
+    println!("| IPv4            | MAC               | Hostname              | Vendor                          |");
+    println!("|-----------------|-------------------|-----------------------|---------------------------------|");
 
     for detail in target_details.iter() {
 
@@ -82,7 +82,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
             Some(vendor) => &vendor,
             None => &""
         };
-        println!("| {: <15} | {: <18} | {: <21} | {: <26} |", detail.ipv4, detail.mac, hostname, vendor);
+        println!("| {: <15} | {: <18} | {: <21} | {: <31} |", detail.ipv4, detail.mac, hostname, vendor);
     }
 
     println!();
