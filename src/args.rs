@@ -5,8 +5,7 @@ use std::sync::Arc;
 use clap::{Arg, ArgMatches, App};
 use pnet::datalink::MacAddr;
 
-const FIVE_HOURS: u64 = 5 * 60 * 60; 
-const TIMEOUT_DEFAULT: u64 = 2;
+const TIMEOUT_MS_DEFAULT: u64 = 2000;
 const HOST_RETRY_DEFAULT: usize = 1;
 const REQUEST_MS_INTERVAL: u64 = 10;
 
@@ -25,7 +24,7 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface")
         )
         .arg(
-            Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_SECONDS").help("ARP response timeout")
+            Arg::with_name("timeout").short("t").long("timeout").takes_value(true).value_name("TIMEOUT_DURATION").help("ARP response timeout")
         )
         .arg(
             Arg::with_name("source_ip").short("S").long("source-ip").takes_value(true).value_name("SOURCE_IPV4").help("Source IPv4 address for requests")
@@ -46,7 +45,7 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("random").short("R").long("random").takes_value(false).help("Randomize the target list")
         )
         .arg(
-            Arg::with_name("interval").short("I").long("interval").takes_value(true).value_name("MS_INTERVAL").help("Milliseconds between ARP requests")
+            Arg::with_name("interval").short("I").long("interval").takes_value(true).value_name("INTERVAL_DURATION").help("Milliseconds between ARP requests")
         )
         .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
@@ -64,13 +63,13 @@ pub enum OutputFormat {
 
 pub struct ScanOptions {
     pub interface_name: String,
-    pub timeout_seconds: u64,
+    pub timeout_ms: u64,
     pub resolve_hostname: bool,
     pub source_ipv4: Option<Ipv4Addr>,
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
     pub retry_count: usize,
-    pub interval: u64,
+    pub interval_ms: u64,
     pub randomize_targets: bool,
     pub output: OutputFormat
 }
@@ -101,15 +100,9 @@ impl ScanOptions {
             }
         };
 
-        let timeout_seconds: u64 = match matches.value_of("timeout").map(|seconds| seconds.parse::<u64>()) {
-            Some(seconds) => seconds.unwrap_or(TIMEOUT_DEFAULT),
-            None => TIMEOUT_DEFAULT
-        };
-    
-        if timeout_seconds > FIVE_HOURS {
-            eprintln!("The timeout exceeds the limit (maximum {} seconds allowed)", FIVE_HOURS);
-            process::exit(1);
-        }
+        let timeout_ms: u64 = matches.value_of("timeout")
+            .map(|timeout_text| parse_to_milliseconds(timeout_text))
+            .unwrap_or(TIMEOUT_MS_DEFAULT);
 
         // Hostnames will not be resolved in numeric mode
         let resolve_hostname = !matches.is_present("numeric");
@@ -170,19 +163,9 @@ impl ScanOptions {
             None => HOST_RETRY_DEFAULT
         };
 
-        let interval = match matches.value_of("interval") {
-            Some(interval_text) => {
-    
-                match interval_text.parse::<u64>() {
-                    Ok(interval_number) => interval_number,
-                    Err(_) => {
-                        eprintln!("Expected positive interval");
-                        process::exit(1);
-                    }
-                }
-            },
-            None => REQUEST_MS_INTERVAL
-        };
+        let interval_ms: u64 = matches.value_of("interval")
+            .map(|interval_text| parse_to_milliseconds(interval_text))
+            .unwrap_or(REQUEST_MS_INTERVAL);
 
         let output = match matches.value_of("output") {
             Some(output_request) => {
@@ -204,13 +187,13 @@ impl ScanOptions {
     
         Arc::new(ScanOptions {
             interface_name,
-            timeout_seconds,
+            timeout_ms,
             resolve_hostname,
             source_ipv4,
             destination_mac,
             vlan_id,
             retry_count,
-            interval,
+            interval_ms,
             randomize_targets,
             output
         })
@@ -221,4 +204,49 @@ impl ScanOptions {
         matches!(&self.output, OutputFormat::Plain)
     }
 
+}
+
+/**
+ * Parse a given time string into milliseconds. This can be used to convert a
+ * string such as '20ms', '10s' or '1h' into adequate milliseconds. Without
+ * suffix, the default behavior is to parse into milliseconds.
+ */
+fn parse_to_milliseconds(time_arg: &str) -> u64 {
+
+    let len = time_arg.len();
+
+    if time_arg.ends_with("ms") {
+        let milliseconds_text = &time_arg[0..len-2];
+        return milliseconds_text.parse::<u64>()
+            .unwrap_or_else(|err| {
+                eprintln!("Expected valid milliseconds ({})", err);
+                process::exit(1);
+            });
+    }
+
+    if time_arg.ends_with('s') {
+        let seconds_text = &time_arg[0..len-1];
+        return seconds_text.parse::<u64>()
+            .map(|value| value * 1000)
+            .unwrap_or_else(|err| {
+                eprintln!("Expected valid seconds ({})", err);
+                process::exit(1);
+            });
+    }
+
+    if time_arg.ends_with('h') {
+        let hour_text = &time_arg[0..len-1];
+        return hour_text.parse::<u64>()
+            .map(|value| value * 1000 * 60)
+            .unwrap_or_else(|err| {
+                eprintln!("Expected valid hours ({})", err);
+                process::exit(1);
+            });
+    }
+
+    time_arg.parse::<u64>()
+        .unwrap_or_else(|err| {
+            eprintln!("Expected valid milliseconds ({})", err);
+            process::exit(1);
+        })
 }
