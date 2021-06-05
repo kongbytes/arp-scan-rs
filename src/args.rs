@@ -48,6 +48,9 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("interval").short("I").long("interval").takes_value(true).value_name("INTERVAL_DURATION").help("Milliseconds between ARP requests")
         )
         .arg(
+            Arg::with_name("oui-file").long("oui-file").takes_value(true).value_name("FILE_PATH").help("Path to custom IEEE OUI CSV file")
+        )
+        .arg(
             Arg::with_name("list").short("l").long("list").takes_value(false).help("List network interfaces")
         )
         .arg(
@@ -71,7 +74,8 @@ pub struct ScanOptions {
     pub retry_count: usize,
     pub interval_ms: u64,
     pub randomize_targets: bool,
-    pub output: OutputFormat
+    pub output: OutputFormat,
+    pub oui_file: String
 }
 
 impl ScanOptions {
@@ -184,6 +188,13 @@ impl ScanOptions {
         };
 
         let randomize_targets = matches.is_present("random");
+
+        
+
+        let oui_file: String = match matches.value_of("oui-file") {
+            Some(file) => file.to_string(),
+            None => "/usr/share/arp-scan/ieee-oui.csv".to_string()
+        };
     
         Arc::new(ScanOptions {
             interface_name,
@@ -195,7 +206,8 @@ impl ScanOptions {
             retry_count,
             interval_ms,
             randomize_targets,
-            output
+            output,
+            oui_file
         })
     }
 
