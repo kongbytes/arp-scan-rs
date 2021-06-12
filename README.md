@@ -16,7 +16,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.8.0/arp-scan-v0.8.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.9.0/arp-scan-v0.9.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -85,6 +85,10 @@ Change or force the MAC address sent as destination ARP request. By default, a b
 
 Randomize the IPv4 target list before sending ARP requests. By default, all ARP requests are sent in ascending order by IPv4 address.
 
+#### Use custom MAC OUI file `--oui-file`
+
+Use a [custom OUI MAC file](http://standards-oui.ieee.org/oui/oui.csv), the default path will be set to `/usr/share/arp-scan/ieee-oui.csv"`.
+
 #### Set VLAN ID `-Q 540`
 
 Add a 802.1Q field in the Ethernet frame. This fields contains the given VLAN ID for outgoing ARP requests. By default, the Ethernet frame is sent without 802.1Q fields (no VLAN).
@@ -108,7 +112,7 @@ The features below will be shipped in the next releases of the project.
 - Complete VLAN support
 - ~~Exports (JSON & YAML)~~ - released in 0.7.0
 - Full ARP packet customization (Ethernet protocol, ARP operation, ...)
-- MAC vendor lookup in the results
+- ~~MAC vendor lookup in the results~~ - released in 0.9.0
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
 - Wide network range support
 
