@@ -5,11 +5,13 @@
 
 Find all hosts in your local network using this fast ARP scanner. The CLI is written in Rust and provides a minimal scanner that finds all hosts using the ARP protocol. Inspired by the awesome [arp-scan project](https://github.com/royhills/arp-scan).
 
-:heavy_check_mark: Minimal Rust binary & fast ARP scans
+✔ Minimal Rust binary & fast ARP scans
 
-:heavy_check_mark: Scan customization (ARP, timings, interface, DNS, ...)
+✔ Scan customization (ARP, timings, interface, DNS, ...)
 
-:heavy_check_mark: JSON & YAML exports
+✔ MAC vendor search
+
+✔ JSON & YAML exports
 
 ## Getting started
 
@@ -34,7 +36,7 @@ Launch a scan on interface `wlp1s0`.
 Enhance the minimum scan timeout to 5 seconds (by default, 2 seconds).
 
 ```bash
-./arp-scan -i wlp1s0 -t 5
+./arp-scan -i wlp1s0 -t 5s
 ```
 
 Perform an ARP scan on the default network interface, VLAN 45 and JSON output.
@@ -57,13 +59,13 @@ List all available network interfaces. Using this option will only print a list 
 
 Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target. By default, the first network interface with an `up` status and a valid IPv4 will be selected.
 
-#### Set global scan timeout `-t 15`
+#### Set global scan timeout `-t 15s`
 
-Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2`.
+Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2000ms`.
 
-#### Change ARP request interval `-I 30`
+#### Change ARP request interval `-I 30ms`
 
-By default, a 10ms gap will be set between ARP requests to avoid an ARP storm on the network. This value can be changed to reduce or increase the milliseconds between each ARP request.
+By default, a `10ms` gap will be set between ARP requests to avoid an ARP storm on the network. This value can be changed to reduce or increase the milliseconds between each ARP request.
 
 #### Numeric mode `-n`
 
