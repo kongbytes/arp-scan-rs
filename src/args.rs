@@ -7,7 +7,9 @@ use pnet::datalink::MacAddr;
 use pnet::packet::arp::{ArpHardwareType, ArpOperation};
 use pnet::packet::ethernet::EtherType;
 
+const TIMEOUT_MS_FAST: u64 = 800;
 const TIMEOUT_MS_DEFAULT: u64 = 2000;
+
 const HOST_RETRY_DEFAULT: usize = 1;
 const REQUEST_MS_INTERVAL: u64 = 10;
 
@@ -163,11 +165,14 @@ impl ScanOptions {
                 eprintln!("Expected correct timeout, {}", err);
                 process::exit(1);
             }),
-            None => TIMEOUT_MS_DEFAULT
+            None => match profile {
+                ProfileType::Fast => TIMEOUT_MS_FAST,
+                _ => TIMEOUT_MS_DEFAULT
+            }
         };
 
-        // Hostnames will not be resolved in numeric mode
-        let resolve_hostname = !matches.is_present("numeric");
+        // Hostnames will not be resolved in numeric mode or stealth profile
+        let resolve_hostname = !matches.is_present("numeric") && !matches!(profile, ProfileType::Stealth);
 
         let source_ipv4: Option<Ipv4Addr> = match matches.value_of("source_ip") {
             Some(source_ip) => {
@@ -236,7 +241,10 @@ impl ScanOptions {
                     }
                 }
             },
-            None => HOST_RETRY_DEFAULT
+            None => match profile {
+                ProfileType::Chaos => HOST_RETRY_DEFAULT * 2,
+                _ => HOST_RETRY_DEFAULT
+            }
         };
 
         let interval_ms: u64 = match matches.value_of("interval") {
@@ -244,7 +252,10 @@ impl ScanOptions {
                 eprintln!("Expected correct interval, {}", err);
                 process::exit(1);
             }),
-            None => REQUEST_MS_INTERVAL
+            None => match profile {
+                ProfileType::Stealth => REQUEST_MS_INTERVAL * 2,
+                _ => REQUEST_MS_INTERVAL
+            }
         };
 
         let output = match matches.value_of("output") {
@@ -263,7 +274,7 @@ impl ScanOptions {
             None => OutputFormat::Plain
         };
 
-        let randomize_targets = matches.is_present("random");
+        let randomize_targets = matches.is_present("random") || matches!(profile, ProfileType::Stealth | ProfileType::Chaos);
 
         let oui_file: String = match matches.value_of("oui-file") {
             Some(file) => file.to_string(),
