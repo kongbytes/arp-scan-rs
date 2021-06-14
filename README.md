@@ -83,6 +83,10 @@ Change or force the IPv4 address sent as source in the broadcasted ARP packets. 
 
 Change or force the MAC address sent as destination ARP request. By default, a broadcast destination (`00:00:00:00:00:00`) will be set.
 
+#### Change source MAC `-M 11:24:71:29:21:76`
+
+Change or force the MAC address sent as source in the ARP request. By default, the network interface MAC will be used.
+
 #### Randomize target list `-R`
 
 Randomize the IPv4 target list before sending ARP requests. By default, all ARP requests are sent in ascending order by IPv4 address.

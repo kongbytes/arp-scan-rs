@@ -23,6 +23,9 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
         .version(CLI_VERSION)
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
+            Arg::with_name("profile").short("p").long("profile").takes_value(true).value_name("PROFILE_NAME").help("Scan profile")
+        )
+        .arg(
             Arg::with_name("interface").short("i").long("interface").takes_value(true).value_name("INTERFACE_NAME").help("Network interface")
         )
         .arg(
@@ -84,7 +87,15 @@ pub enum OutputFormat {
     Yaml
 }
 
+pub enum ProfileType {
+    Default,
+    Fast,
+    Stealth,
+    Chaos
+}
+
 pub struct ScanOptions {
+    pub profile: ProfileType,
     pub interface_name: String,
     pub timeout_ms: u64,
     pub resolve_hostname: bool,
@@ -113,6 +124,23 @@ impl ScanOptions {
      */
     pub fn new(matches: &ArgMatches) -> Arc<Self> {
 
+        let profile = match matches.value_of("profile") {
+            Some(output_request) => {
+
+                match output_request {
+                    "default" | "d" => ProfileType::Default,
+                    "fast" | "f" => ProfileType::Fast,
+                    "stealth" | "s" => ProfileType::Stealth,
+                    "chaos" | "c" => ProfileType::Chaos,
+                    _ => {
+                        eprintln!("Expected correct profile name (default/fast/stealth/chaos)");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => ProfileType::Default
+        };
+
         let interface_name = match matches.value_of("interface") {
             Some(name) => String::from(name),
             None => {
@@ -130,9 +158,13 @@ impl ScanOptions {
             }
         };
 
-        let timeout_ms: u64 = matches.value_of("timeout")
-            .map(|timeout_text| parse_to_milliseconds(timeout_text))
-            .unwrap_or(TIMEOUT_MS_DEFAULT);
+        let timeout_ms: u64 = match matches.value_of("timeout") {
+            Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {
+                eprintln!("Expected correct timeout, {}", err);
+                process::exit(1);
+            }),
+            None => TIMEOUT_MS_DEFAULT
+        };
 
         // Hostnames will not be resolved in numeric mode
         let resolve_hostname = !matches.is_present("numeric");
@@ -207,9 +239,13 @@ impl ScanOptions {
             None => HOST_RETRY_DEFAULT
         };
 
-        let interval_ms: u64 = matches.value_of("interval")
-            .map(|interval_text| parse_to_milliseconds(interval_text))
-            .unwrap_or(REQUEST_MS_INTERVAL);
+        let interval_ms: u64 = match matches.value_of("interval") {
+            Some(interval_text) => parse_to_milliseconds(interval_text).unwrap_or_else(|err| {
+                eprintln!("Expected correct interval, {}", err);
+                process::exit(1);
+            }),
+            None => REQUEST_MS_INTERVAL
+        };
 
         let output = match matches.value_of("output") {
             Some(output_request) => {
@@ -305,6 +341,7 @@ impl ScanOptions {
         };
     
         Arc::new(ScanOptions {
+            profile,
             interface_name,
             timeout_ms,
             resolve_hostname,
@@ -342,42 +379,93 @@ impl ScanOptions {
  * string such as '20ms', '10s' or '1h' into adequate milliseconds. Without
  * suffix, the default behavior is to parse into milliseconds.
  */
-fn parse_to_milliseconds(time_arg: &str) -> u64 {
+fn parse_to_milliseconds(time_arg: &str) -> Result<u64, &str> {
 
     let len = time_arg.len();
 
     if time_arg.ends_with("ms") {
         let milliseconds_text = &time_arg[0..len-2];
-        return milliseconds_text.parse::<u64>()
-            .unwrap_or_else(|err| {
-                eprintln!("Expected valid milliseconds ({})", err);
-                process::exit(1);
-            });
+        return match milliseconds_text.parse::<u64>() {
+            Ok(ms_value) => Ok(ms_value),
+            Err(_) => Err("invalid milliseconds")
+        };
     }
 
     if time_arg.ends_with('s') {
         let seconds_text = &time_arg[0..len-1];
-        return seconds_text.parse::<u64>()
-            .map(|value| value * 1000)
-            .unwrap_or_else(|err| {
-                eprintln!("Expected valid seconds ({})", err);
-                process::exit(1);
-            });
+        return match seconds_text.parse::<u64>().map(|value| value * 1000) {
+            Ok(ms_value) => Ok(ms_value),
+            Err(_) => Err("invalid seconds")
+        };
+    }
+
+    if time_arg.ends_with('m') {
+        let seconds_text = &time_arg[0..len-1];
+        return match seconds_text.parse::<u64>().map(|value| value * 1000 * 60) {
+            Ok(ms_value) => Ok(ms_value),
+            Err(_) => Err("invalid minutes")
+        };
     }
 
     if time_arg.ends_with('h') {
         let hour_text = &time_arg[0..len-1];
-        return hour_text.parse::<u64>()
-            .map(|value| value * 1000 * 60)
-            .unwrap_or_else(|err| {
-                eprintln!("Expected valid hours ({})", err);
-                process::exit(1);
-            });
+        return match hour_text.parse::<u64>().map(|value| value * 1000 * 60 * 60) {
+            Ok(ms_value) => Ok(ms_value),
+            Err(_) => Err("invalid hours")
+        };
     }
 
-    time_arg.parse::<u64>()
-        .unwrap_or_else(|err| {
-            eprintln!("Expected valid milliseconds ({})", err);
-            process::exit(1);
-        })
+    match time_arg.parse::<u64>() {
+        Ok(ms_value) => Ok(ms_value),
+        Err(_) => Err("invalid milliseconds")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn should_parse_milliseconds() {
+        
+        assert_eq!(parse_to_milliseconds("1000"), Ok(1000));
+    }
+
+    #[test]
+    fn should_parse_seconds() {
+        
+        assert_eq!(parse_to_milliseconds("5s"), Ok(5000));
+    }
+
+    #[test]
+    fn should_parse_minutes() {
+        
+        assert_eq!(parse_to_milliseconds("3m"), Ok(180_000));
+    }
+
+    #[test]
+    fn should_parse_hours() {
+        
+        assert_eq!(parse_to_milliseconds("2h"), Ok(7_200_000));
+    }
+
+    #[test]
+    fn should_deny_negative() {
+        
+        assert_eq!(parse_to_milliseconds("-45"), Err("invalid milliseconds"));
+    }
+
+    #[test]
+    fn should_deny_floating_numbers() {
+        
+        assert_eq!(parse_to_milliseconds("3.235"), Err("invalid milliseconds"));
+    }
+
+    #[test]
+    fn should_deny_invalid_characters() {
+        
+        assert_eq!(parse_to_milliseconds("3z"), Err("invalid milliseconds"));
+    }
+
 }
