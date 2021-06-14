@@ -1,5 +1,6 @@
 use pnet::datalink::{self, NetworkInterface};
 use serde::Serialize;
+use std::process;
 
 use crate::network::{ResponseSummary, TargetDetails};
 use crate::args::ScanOptions;
@@ -167,7 +168,10 @@ pub fn export_to_json(response_summary: ResponseSummary, mut target_details: Vec
 
     let global_result = get_serializable_result(response_summary, target_details);
 
-    serde_json::to_string(&global_result).unwrap()
+    serde_json::to_string(&global_result).unwrap_or_else(|err| {
+        eprintln!("Could not export JSON results ({})", err);
+        process::exit(1);
+    })
 }
 
 /**
@@ -180,5 +184,8 @@ pub fn export_to_yaml(response_summary: ResponseSummary, mut target_details: Vec
 
     let global_result = get_serializable_result(response_summary, target_details);
 
-    serde_yaml::to_string(&global_result).unwrap()
+    serde_yaml::to_string(&global_result).unwrap_or_else(|err| {
+        eprintln!("Could not export YAML results ({})", err);
+        process::exit(1);
+    })
 }
