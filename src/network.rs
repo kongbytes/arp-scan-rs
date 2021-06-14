@@ -53,9 +53,9 @@ pub struct TargetDetails {
  */
 pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, ip_network: &IpNetwork, target_ip: Ipv4Addr, options: Arc<ScanOptions>) {
 
-    let mut ethernet_buffer = match options.vlan_id {
-        Some(_) => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
-        None => vec![0u8; ETHERNET_STD_PACKET_SIZE]
+    let mut ethernet_buffer = match options.has_vlan() {
+        true => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
+        false => vec![0u8; ETHERNET_STD_PACKET_SIZE]
     };
     let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap_or_else(|| {
         eprintln!("Could not build Ethernet packet");
@@ -66,10 +66,13 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
         Some(forced_mac) => forced_mac,
         None => MacAddr::broadcast()
     };
-    let source_mac = interface.mac.unwrap_or_else(|| {
-        eprintln!("Interface should have a MAC address");
-        process::exit(1);
-    });
+    let source_mac = match options.source_mac {
+        Some(forced_source_mac) => forced_source_mac,
+        None => interface.mac.unwrap_or_else(|| {
+            eprintln!("Interface should have a MAC address");
+            process::exit(1);
+        })
+    };
 
     ethernet_packet.set_destination(target_mac);
     ethernet_packet.set_source(source_mac);
@@ -88,11 +91,11 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
 
     let source_ipv4 = find_source_ip(ip_network, options.source_ipv4);
 
-    arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
-    arp_packet.set_protocol_type(EtherTypes::Ipv4);
-    arp_packet.set_hw_addr_len(6);
-    arp_packet.set_proto_addr_len(4);
-    arp_packet.set_operation(ArpOperations::Request);
+    arp_packet.set_hardware_type(options.hw_type.unwrap_or(ArpHardwareTypes::Ethernet));
+    arp_packet.set_protocol_type(options.proto_type.unwrap_or(EtherTypes::Ipv4));
+    arp_packet.set_hw_addr_len(options.hw_addr.unwrap_or(6));
+    arp_packet.set_proto_addr_len(options.proto_addr.unwrap_or(4));
+    arp_packet.set_operation(options.arp_operation.unwrap_or(ArpOperations::Request));
     arp_packet.set_sender_hw_addr(source_mac);
     arp_packet.set_sender_proto_addr(source_ipv4);
     arp_packet.set_target_hw_addr(target_mac);
@@ -145,7 +148,8 @@ fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) 
  * Wait at least N seconds and receive ARP network responses. The main
  * downside of this function is the blocking nature of the datalink receiver:
  * when the N seconds are elapsed, the receiver loop will therefore only stop
- * on the next received frame.
+ * on the next received frame. Therefore, the receiver should have been
+ * configured to stop at certain intervals (500ms for example).
  */
 pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<ScanOptions>, timed_out: Arc<AtomicBool>, vendor_list: &mut Vendor) -> (ResponseSummary, Vec<TargetDetails>) {
 
@@ -191,6 +195,10 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
         let arp_packet = ArpPacket::new(&arp_buffer[MutableEthernetPacket::minimum_packet_size()..]);
         arp_count += 1;
 
+        // If we found an ARP packet, extract the details and add the essential
+        // fields in the discover map. Please note that results are grouped by
+        // IPv4 address - which means that a MAC change will appear as two
+        // separete records in the result table.
         if let Some(arp) = arp_packet {
 
             let sender_ipv4 = arp.get_sender_proto_addr();
@@ -205,6 +213,8 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
         }
     }
 
+    // For each target found, enhance each item with additional results
+    // results such as the hostname & MAC vendor.
     let target_details = discover_map.into_iter().map(|(_, mut target_detail)| {
 
         if options.resolve_hostname {
@@ -219,6 +229,8 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
 
     }).collect();
 
+    // The response summary can be used to display analytics related to the
+    // performed ARP scans (packet counts, timings, ...)
     let response_summary = ResponseSummary {
         packet_count,
         arp_count,
