@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
 use pnet::datalink::MacAddr;
+use pnet::packet::arp::{ArpHardwareType, ArpOperation};
+use pnet::packet::ethernet::EtherType;
 
 const TIMEOUT_MS_DEFAULT: u64 = 2000;
 const HOST_RETRY_DEFAULT: usize = 1;
@@ -33,6 +35,9 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("destination_mac").short("M").long("dest-mac").takes_value(true).value_name("DESTINATION_MAC").help("Destination MAC address for requests")
         )
         .arg(
+            Arg::with_name("source_mac").long("source-mac").takes_value(true).value_name("SOURCE_MAC").help("Source MAC address for requests")
+        )
+        .arg(
             Arg::with_name("numeric").short("n").long("numeric").takes_value(false).help("Numeric mode, no hostname resolution")
         )
         .arg(
@@ -56,6 +61,21 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
         .arg(
             Arg::with_name("output").short("o").long("output").takes_value(true).value_name("FORMAT").help("Define output format")
         )
+        .arg(
+            Arg::with_name("hw_type").long("hw-type").takes_value(true).value_name("HW_TYPE").help("Custom ARP hardware field")
+        )
+        .arg(
+            Arg::with_name("hw_addr").long("hw-addr").takes_value(true).value_name("ADDRESS_LEN").help("Custom ARP hardware address length")
+        )
+        .arg(
+            Arg::with_name("proto_type").long("proto-type").takes_value(true).value_name("PROTO_TYPE").help("Custom ARP proto type")
+        )
+        .arg(
+            Arg::with_name("proto_addr").long("proto-addr").takes_value(true).value_name("ADDRESS_LEN").help("Custom ARP proto address length")
+        )
+        .arg(
+            Arg::with_name("arp_operation").long("arp-op").takes_value(true).value_name("OPERATION_ID").help("Custom ARP operation ID")
+        )
 }
 
 pub enum OutputFormat {
@@ -69,13 +89,19 @@ pub struct ScanOptions {
     pub timeout_ms: u64,
     pub resolve_hostname: bool,
     pub source_ipv4: Option<Ipv4Addr>,
+    pub source_mac: Option<MacAddr>,
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
     pub retry_count: usize,
     pub interval_ms: u64,
     pub randomize_targets: bool,
     pub output: OutputFormat,
-    pub oui_file: String
+    pub oui_file: String,
+    pub hw_type: Option<ArpHardwareType>,
+    pub hw_addr: Option<u8>,
+    pub proto_type: Option<EtherType>,
+    pub proto_addr: Option<u8>,
+    pub arp_operation: Option<ArpOperation>
 }
 
 impl ScanOptions {
@@ -138,6 +164,20 @@ impl ScanOptions {
             },
             None => None
         };
+
+        let source_mac: Option<MacAddr> = match matches.value_of("source_mac") {
+            Some(mac_address) => {
+                
+                match mac_address.parse::<MacAddr>() {
+                    Ok(parsed_mac) => Some(parsed_mac),
+                    Err(_) => {
+                        eprintln!("Expected valid MAC address as source");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
+        };
     
         let vlan_id: Option<u16> = match matches.value_of("vlan") {
             Some(vlan) => {
@@ -189,11 +229,79 @@ impl ScanOptions {
 
         let randomize_targets = matches.is_present("random");
 
-        
-
         let oui_file: String = match matches.value_of("oui-file") {
             Some(file) => file.to_string(),
             None => "/usr/share/arp-scan/ieee-oui.csv".to_string()
+        };
+
+        let hw_type = match matches.value_of("hw-type") {
+            Some(hw_type_text) => {
+    
+                match hw_type_text.parse::<u16>() {
+                    Ok(type_number) => Some(ArpHardwareType::new(type_number)),
+                    Err(_) => {
+                        eprintln!("Expected valid ARP hardware type number");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
+        };
+        
+        let hw_addr = match matches.value_of("hw-addr") {
+            Some(hw_addr_text) => {
+    
+                match hw_addr_text.parse::<u8>() {
+                    Ok(addr_length) => Some(addr_length),
+                    Err(_) => {
+                        eprintln!("Expected valid ARP hardware address length");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
+        };
+        
+        let proto_type = match matches.value_of("proto-type") {
+            Some(proto_type_text) => {
+    
+                match proto_type_text.parse::<u16>() {
+                    Ok(type_number) => Some(EtherType::new(type_number)),
+                    Err(_) => {
+                        eprintln!("Expected valid ARP proto type number");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
+        };
+        
+        let proto_addr = match matches.value_of("proto-addr") {
+            Some(proto_addr_text) => {
+    
+                match proto_addr_text.parse::<u8>() {
+                    Ok(addr_length) => Some(addr_length),
+                    Err(_) => {
+                        eprintln!("Expected valid ARP hardware address length");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
+        };
+
+        let arp_operation = match matches.value_of("arp-op") {
+            Some(arp_op_text) => {
+    
+                match arp_op_text.parse::<u16>() {
+                    Ok(op_number) => Some(ArpOperation::new(op_number)),
+                    Err(_) => {
+                        eprintln!("Expected valid ARP operation number");
+                        process::exit(1);
+                    }
+                }
+            },
+            None => None
         };
     
         Arc::new(ScanOptions {
@@ -202,18 +310,29 @@ impl ScanOptions {
             resolve_hostname,
             source_ipv4,
             destination_mac,
+            source_mac,
             vlan_id,
             retry_count,
             interval_ms,
             randomize_targets,
             output,
-            oui_file
+            oui_file,
+            hw_type,
+            hw_addr,
+            proto_type,
+            proto_addr,
+            arp_operation
         })
     }
 
     pub fn is_plain_output(&self) -> bool {
 
         matches!(&self.output, OutputFormat::Plain)
+    }
+
+    pub fn has_vlan(&self) -> bool {
+
+        matches!(&self.vlan_id, Some(_)) 
     }
 
 }
