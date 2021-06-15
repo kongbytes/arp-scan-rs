@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::ErrorKind::TimedOut;
+use std::convert::TryInto;
 
 use dns_lookup::lookup_addr;
 use ipnetwork::IpNetwork;
@@ -17,12 +18,24 @@ use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
 use crate::args::ScanOptions;
 use crate::vendor::Vendor;
 
+pub const DATALINK_RCV_TIMEOUT: u64 = 500;
+
 const VLAN_QOS_DEFAULT: u8 = 1;
 const ARP_PACKET_SIZE: usize = 28;
 const VLAN_PACKET_SIZE: usize = 32;
 
 const ETHERNET_STD_PACKET_SIZE: usize = 42;
 const ETHERNET_VLAN_PACKET_SIZE: usize = 46;
+
+/**
+ * Contains scan estimation records. This will be computed before the scan
+ * starts and should give insights about the scan.
+ */
+pub struct ScanEstimation {
+    pub duration_ms: u128,
+    pub request_size: u128,
+    pub bandwidth: u128
+}
 
 /**
  * Gives high-level details about the scan response. This may include Ethernet
@@ -44,6 +57,37 @@ pub struct TargetDetails {
     pub mac: MacAddr,
     pub hostname: Option<String>,
     pub vendor: Option<String>
+}
+
+/**
+ * Based on the network size and given scan options, this function performs an
+ * estimation of the scan impact (timing, bandwidth, ...). Keep in mind that
+ * this is only an estimation, real results may vary based on the network.
+ */
+pub fn compute_scan_estimation(network_size: u128, options: &Arc<ScanOptions>) -> ScanEstimation {
+
+    let interval: u128 = options.interval_ms.into();
+    let timeout: u128 = options.timeout_ms.into();
+    let packet_size: u128 = match options.has_vlan() {
+        true => ETHERNET_VLAN_PACKET_SIZE.try_into().unwrap(),
+        false => ETHERNET_STD_PACKET_SIZE.try_into().unwrap()
+    };
+    let retry_count: u128 = options.retry_count.try_into().unwrap();
+
+    let avg_arp_request_ms = 3;
+    let avg_resolve_ms = 500;
+
+    let request_duration_ms: u128 = (network_size * (interval+avg_arp_request_ms)) * retry_count;
+    let duration_ms = request_duration_ms + timeout + avg_resolve_ms;
+    let request_size: u128 = network_size * packet_size;
+
+    let bandwidth = (request_size / request_duration_ms) * 1000;
+
+    ScanEstimation {
+        duration_ms,
+        request_size,
+        bandwidth
+    }
 }
 
 /**

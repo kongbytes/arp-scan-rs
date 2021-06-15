@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use ipnetwork::NetworkSize;
 use pnet::datalink;
 use rand::prelude::*;
 
@@ -85,7 +84,7 @@ fn main() {
     // local network.
 
     let channel_config = datalink::Config {
-        read_timeout: Some(Duration::from_millis(500)), 
+        read_timeout: Some(Duration::from_millis(network::DATALINK_RCV_TIMEOUT)), 
         ..datalink::Config::default()
     };
 
@@ -112,15 +111,13 @@ fn main() {
     let cloned_options = Arc::clone(&scan_options);
     let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out, &mut vendor_list));
 
-    let network_size: u128 = match ip_network.size() {
-        NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
-        NetworkSize::V6(_) => {
-            eprintln!("IPv6 networks are not supported by the ARP protocol");
-            process::exit(1);
-        }
-    };
+    let network_size = utils::compute_network_size(&ip_network);
 
     if scan_options.is_plain_output() {
+
+        let estimations = network::compute_scan_estimation(network_size, &scan_options);
+        println!("Estimated scan time {}ms (sending {} bytes, {} bytes/s)", estimations.duration_ms, estimations.request_size, estimations.bandwidth);
+        
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }
 

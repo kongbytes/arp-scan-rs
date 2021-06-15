@@ -1,4 +1,5 @@
 use pnet::datalink::{self, NetworkInterface};
+use ipnetwork::{IpNetwork, NetworkSize};
 use serde::Serialize;
 use std::process;
 
@@ -58,6 +59,17 @@ pub fn select_default_interface() -> Option<NetworkInterface> {
 
         true
     })
+}
+
+pub fn compute_network_size(ip_network: &IpNetwork) -> u128 {
+
+    match ip_network.size() {
+        NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
+        NetworkSize::V6(_) => {
+            eprintln!("IPv6 networks are not supported by the ARP protocol");
+            process::exit(1);
+        }
+    }
 }
 
 /**
