@@ -64,24 +64,26 @@ pub struct TargetDetails {
  * estimation of the scan impact (timing, bandwidth, ...). Keep in mind that
  * this is only an estimation, real results may vary based on the network.
  */
-pub fn compute_scan_estimation(network_size: u128, options: &Arc<ScanOptions>) -> ScanEstimation {
+pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> ScanEstimation {
 
     let interval: u128 = options.interval_ms.into();
     let timeout: u128 = options.timeout_ms.into();
     let packet_size: u128 = match options.has_vlan() {
-        true => ETHERNET_VLAN_PACKET_SIZE.try_into().unwrap(),
-        false => ETHERNET_STD_PACKET_SIZE.try_into().unwrap()
+        true => ETHERNET_VLAN_PACKET_SIZE.try_into().expect("Internal number conversion failed for VLAN packet size"),
+        false => ETHERNET_STD_PACKET_SIZE.try_into().expect("Internal number conversion failed for Ethernet packet size")
     };
     let retry_count: u128 = options.retry_count.try_into().unwrap();
 
+    // The values below are averages based on an amount of performed network
+    // scans. This may of course vary based on network configurations.
     let avg_arp_request_ms = 3;
     let avg_resolve_ms = 500;
 
-    let request_duration_ms: u128 = (network_size * (interval+avg_arp_request_ms)) * retry_count;
-    let duration_ms = request_duration_ms + timeout + avg_resolve_ms;
-    let request_size: u128 = network_size * packet_size;
+    let request_phase_ms = (host_count * (avg_arp_request_ms+ interval)) * retry_count;
+    let duration_ms = request_phase_ms + timeout + avg_resolve_ms;
+    let request_size = host_count * packet_size;
 
-    let bandwidth = (request_size / request_duration_ms) * 1000;
+    let bandwidth = (request_size * 1000) / request_phase_ms;
 
     ScanEstimation {
         duration_ms,

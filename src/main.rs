@@ -116,7 +116,7 @@ fn main() {
     if scan_options.is_plain_output() {
 
         let estimations = network::compute_scan_estimation(network_size, &scan_options);
-        println!("Estimated scan time {}ms (sending {} bytes, {} bytes/s)", estimations.duration_ms, estimations.request_size, estimations.bandwidth);
+        println!("Estimated scan time {}ms ({} bytes, {} bytes/s)", estimations.duration_ms, estimations.request_size, estimations.bandwidth);
         
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }

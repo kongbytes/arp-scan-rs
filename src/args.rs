@@ -292,6 +292,7 @@ impl ScanOptions {
             }),
             None => match profile {
                 ProfileType::Stealth => REQUEST_MS_INTERVAL * 2,
+                ProfileType::Fast => 0,
                 _ => REQUEST_MS_INTERVAL
             }
         };
