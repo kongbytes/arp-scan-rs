@@ -18,7 +18,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.9.0/arp-scan-v0.9.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.10.0/arp-scan-v0.10.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -114,11 +114,11 @@ The features below will be shipped in the next releases of the project.
 - Make ARP scans faster
     - with a per-host retry approach
     - ~~by closing the response thread faster~~  - released in 0.8.0
-- Scan profiles (standard, attacker, light, ...)
+- ~~Scan profiles (standard, attacker, light, ...)~~ - released in 0.10.0
 - Complete VLAN support
 - ~~Exports (JSON & YAML)~~ - released in 0.7.0
-- Full ARP packet customization (Ethernet protocol, ARP operation, ...)
-- Time estimations & bandwidth
+- ~~Full ARP packet customization (Ethernet protocol, ARP operation, ...)~~ - released in 0.10.0
+- ~~Time estimations & bandwidth~~ - released in 0.10.0
 - ~~MAC vendor lookup in the results~~ - released in 0.9.0
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
 - Wide network range support
