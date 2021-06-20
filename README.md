@@ -118,6 +118,7 @@ The features below will be shipped in the next releases of the project.
 - Complete VLAN support
 - ~~Exports (JSON & YAML)~~ - released in 0.7.0
 - Full ARP packet customization (Ethernet protocol, ARP operation, ...)
+- Time estimations & bandwidth
 - ~~MAC vendor lookup in the results~~ - released in 0.9.0
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
 - Wide network range support
