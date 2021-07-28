@@ -80,9 +80,26 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
 
     target_details.sort_by_key(|item| item.ipv4);
 
+    let mut hostname_len = 15;
+    let mut vendor_len = 15;
+    for detail in target_details.iter() {
+
+        if let Some(hostname) = &detail.hostname {
+            if hostname.len() > hostname_len {
+                hostname_len = hostname.len();
+            }
+        }
+
+        if let Some(vendor) = &detail.vendor {
+            if vendor.len() > vendor_len {
+                vendor_len = vendor.len();
+            }
+        }
+    }
+
     println!();
-    println!("| IPv4            | MAC               | Hostname              | Vendor                          |");
-    println!("|-----------------|-------------------|-----------------------|---------------------------------|");
+    println!("| IPv4            | MAC               | {: <h_max$} | {: <v_max$} |", "Hostname", "Vendor", h_max=hostname_len, v_max=vendor_len);
+    println!("|-----------------|-------------------|-{:-<h_max$}-|-{:-<v_max$}-|", "", "", h_max=hostname_len, v_max=vendor_len);
 
     for detail in target_details.iter() {
 
@@ -95,7 +112,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
             Some(vendor) => &vendor,
             None => &""
         };
-        println!("| {: <15} | {: <18} | {: <21} | {: <31} |", detail.ipv4, detail.mac, hostname, vendor);
+        println!("| {: <15} | {: <18} | {: <h_max$} | {: <v_max$} |", detail.ipv4, detail.mac, hostname, vendor, h_max=hostname_len, v_max=vendor_len);
     }
 
     println!();
