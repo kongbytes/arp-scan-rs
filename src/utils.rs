@@ -1,7 +1,9 @@
+use std::process;
+
 use pnet::datalink::{self, NetworkInterface};
 use ipnetwork::{IpNetwork, NetworkSize};
 use serde::Serialize;
-use std::process;
+use ansi_term::Color::{Green, Red};
 
 use crate::network::{ResponseSummary, TargetDetails};
 use crate::args::ScanOptions;
@@ -21,17 +23,39 @@ pub fn is_root_user() -> bool {
  */
 pub fn show_interfaces(interfaces: &[NetworkInterface]) {
 
+    let mut interface_count = 0;
+    let mut interface_up_count = 0;
+
+    println!();
     for interface in interfaces.iter() {
+
         let up_text = match interface.is_up() {
-            true => "UP",
-            false => "DOWN"
+            true => format!("{} UP", Green.paint("✔")),
+            false => format!("{} DOWN", Red.paint("✖"))
         };
         let mac_text = match interface.mac {
             Some(mac_address) => format!("{}", mac_address),
             None => "No MAC address".to_string()
         };
-        println!("{: <17} {: <7} {}", interface.name, up_text, mac_text);
+        let first_ip = match interface.ips.get(0) {
+            Some(ip_address) => format!("{}", ip_address),
+            None => "".to_string()
+        };
+
+        println!("{: <20} {: <18} {: <20} {}", interface.name, up_text, mac_text, first_ip);
+
+        interface_count += 1;
+        if interface.is_up() {
+            interface_up_count += 1;
+        }
     }
+
+    println!();
+    println!("Found {} network interfaces, {} seems up for ARP scan", interface_count, interface_up_count);
+    if let Some(default_interface) = select_default_interface() {
+        println!("Default network interface will be {}", default_interface.name);
+    }
+    println!();
 }
 
 /**

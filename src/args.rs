@@ -15,6 +15,19 @@ const REQUEST_MS_INTERVAL: u64 = 10;
 
 const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+const EXAMPLES_HELP: &'static str = "EXAMPLES:
+
+    List network interfaces
+    arp-scan -l
+
+    Launch a scan on WiFi interface with fake IP and stealth profile
+    arp-scan -i wlp1s0 -source-ip 192.168.0.42 -profile stealth
+
+    Launch a scan on VLAN 45 with JSON output
+    arp-scan -Q 45 -o json
+
+";
+
 /**
  * This function groups together all exposed CLI arguments to the end-users
  * with clap. Other CLI details (version, ...) should be grouped there as well.
@@ -119,6 +132,7 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true).value_name("OPERATION_ID")
                 .help("Custom ARP operation ID")
         )
+        .after_help(EXAMPLES_HELP)
 }
 
 pub enum OutputFormat {
