@@ -145,13 +145,33 @@ Change or force the MAC address sent as source in the ARP request. By default, t
 
 Randomize the IPv4 target list before sending ARP requests. By default, all ARP requests are sent in ascending order by IPv4 address.
 
-#### Use custom MAC OUI file `--oui-file`
+#### Use custom MAC OUI file `--oui-file ./my-file.csv`
 
 Use a [custom OUI MAC file](http://standards-oui.ieee.org/oui/oui.csv), the default path will be set to `/usr/share/arp-scan/ieee-oui.csv"`.
 
-#### Set VLAN ID `-Q 540`
+#### Set VLAN ID `-Q 42`
 
 Add a 802.1Q field in the Ethernet frame. This fields contains the given VLAN ID for outgoing ARP requests. By default, the Ethernet frame is sent without 802.1Q fields (no VLAN).
+
+#### Customize ARP operation ID `--arp-op 1`
+
+Change the ARP protocol operation field, this can cause scan failure.
+
+#### Customize ARP hardware type `--hw-type 1`
+
+Change the ARP hardware type field, this can cause scan failure.
+
+#### Customize ARP hardware address length `--hw-addr 6`
+
+Change the ARP hardware address length field, this can cause scan failure.
+
+#### Customize ARP protocol type `--proto-type 2048`
+
+Change the ARP protocol type field, this can cause scan failure.
+
+#### Customize ARP protocol adress length `--proto-addr 4`
+
+Change the ARP protocol address length field, this can cause scan failure.
 
 #### Set output format `-o json`
 
@@ -161,7 +181,7 @@ Set the output format to either `plain` (a full-text output with tables), `json`
 
 Display the ARP scan CLI version and exits the process.
 
-## Roadmap
+## Roadmap & features
 
 The features below will be shipped in the next releases of the project.
 
@@ -175,7 +195,11 @@ The features below will be shipped in the next releases of the project.
 - ~~Time estimations & bandwidth~~ - released in 0.10.0
 - ~~MAC vendor lookup in the results~~ - released in 0.9.0
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
-- Wide network range support
+- Wide network range support & partial results on SIGINT
+- Read network targets from file
+- Adding advanced packet options (padding, LLC, ...)
+- Enable bandwith control (exclusive with interval)
+- Stronger profile defaults (chaos & stealth)
 
 ## Contributing
 
