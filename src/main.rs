@@ -121,9 +121,23 @@ fn main() {
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }
 
+    let finish_sleep = Arc::new(AtomicBool::new(false));
+    let cloned_finish_sleep = Arc::clone(&finish_sleep);
+
+    ctrlc::set_handler(move || {
+        cloned_finish_sleep.store(true, Ordering::Relaxed);
+    }).unwrap_or_else(|err| {
+        eprintln!("Could not set CTRL+C handler ({})", err);
+        process::exit(1);
+    });
+
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
     for _ in 0..scan_options.retry_count {
+
+        if finish_sleep.load(Ordering::Relaxed) {
+            break;
+        }
 
         // The random approach has one major drawback, compared with the native
         // network iterator exposed by 'ipnetwork': memory usage. Instead of
@@ -141,6 +155,10 @@ fn main() {
 
         for ip_address in ip_addresses {
 
+            if finish_sleep.load(Ordering::Relaxed) {
+                break;
+            }
+
             if let IpAddr::V4(ipv4_address) = ip_address {
                 network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, Arc::clone(&scan_options));
                 thread::sleep(Duration::from_millis(scan_options.interval_ms));
@@ -151,7 +169,12 @@ fn main() {
     // Once the ARP packets are sent, the main thread will sleep for T seconds
     // (where T is the timeout option). After the sleep phase, the response
     // thread will receive a stop request through the 'timed_out' mutex.
-    thread::sleep(Duration::from_millis(scan_options.timeout_ms));
+    let mut sleep_ms_mount: u64 = 0;
+    while finish_sleep.load(Ordering::Relaxed) == false && sleep_ms_mount < scan_options.timeout_ms {
+        
+        thread::sleep(Duration::from_millis(500));
+        sleep_ms_mount = sleep_ms_mount + 500;
+    }
     timed_out.store(true, Ordering::Relaxed);
 
     let (response_summary, target_details) = arp_responses.join().unwrap_or_else(|error| {
