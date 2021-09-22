@@ -17,6 +17,7 @@ categories = ["command-line-utilities"]
 clap = "2.33"
 ansi_term = "0.12"
 rand = "0.8"
+ctrlc = "3.2"
 
 # Network
 pnet = "0.28"
