@@ -24,7 +24,7 @@ pub fn is_root_user() -> bool {
 pub fn show_interfaces(interfaces: &[NetworkInterface]) {
 
     let mut interface_count = 0;
-    let mut interface_up_count = 0;
+    let mut ready_count = 0;
 
     println!();
     for interface in interfaces.iter() {
@@ -45,13 +45,13 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
         println!("{: <20} {: <18} {: <20} {}", interface.name, up_text, mac_text, first_ip);
 
         interface_count += 1;
-        if interface.is_up() {
-            interface_up_count += 1;
+        if interface.is_up() && !interface.is_loopback() && interface.ips.len() > 0 {
+            ready_count += 1;
         }
     }
 
     println!();
-    println!("Found {} network interfaces, {} seems up for ARP scan", interface_count, interface_up_count);
+    println!("Found {} network interfaces, {} seems ready for ARP scans", interface_count, ready_count);
     if let Some(default_interface) = select_default_interface() {
         println!("Default network interface will be {}", default_interface.name);
     }
