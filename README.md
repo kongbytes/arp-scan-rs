@@ -63,7 +63,7 @@ ARP scan finished, 5 hosts found in 1.623 seconds
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.10.0/arp-scan-v0.10.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.11.0/arp-scan-v0.11.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -195,7 +195,8 @@ The features below will be shipped in the next releases of the project.
 - ~~Time estimations & bandwidth~~ - released in 0.10.0
 - ~~MAC vendor lookup in the results~~ - released in 0.9.0
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
-- Wide network range support & partial results on SIGINT
+- Wide network range support
+- ~~Partial results on SIGINT~~ - released in 0.11.0
 - Read network targets from file
 - Adding advanced packet options (padding, LLC, ...)
 - Enable bandwith control (exclusive with interval)
