@@ -21,7 +21,7 @@ const EXAMPLES_HELP: &'static str = "EXAMPLES:
     arp-scan -l
 
     Launch a scan on WiFi interface with fake IP and stealth profile
-    arp-scan -i wlp1s0 -source-ip 192.168.0.42 -profile stealth
+    arp-scan -i wlp1s0 --source-ip 192.168.0.42 --profile stealth
 
     Launch a scan on VLAN 45 with JSON output
     arp-scan -Q 45 -o json
