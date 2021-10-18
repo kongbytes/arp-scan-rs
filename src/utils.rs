@@ -45,7 +45,7 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
         println!("{: <20} {: <18} {: <20} {}", interface.name, up_text, mac_text, first_ip);
 
         interface_count += 1;
-        if interface.is_up() && !interface.is_loopback() && interface.ips.len() > 0 {
+        if interface.is_up() && !interface.is_loopback() && !interface.ips.is_empty() {
             ready_count += 1;
         }
     }
@@ -82,7 +82,7 @@ pub fn select_default_interface(interfaces: &[NetworkInterface]) -> Option<Netwo
         true
     });
 
-    default_interface.map(|interface| interface.clone())
+    default_interface.cloned()
 }
 
 pub fn compute_network_size(ip_network: &IpNetwork) -> u128 {
