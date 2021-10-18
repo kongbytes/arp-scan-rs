@@ -46,10 +46,28 @@ fn main() {
         process::exit(1);
     }
 
+    let interface_name = match &scan_options.interface_name {
+        Some(name) => String::from(name),
+        None => {
+
+            let name = utils::select_default_interface(&interfaces).map(|interface| interface.name);
+
+            match name {
+                Some(name) => name,
+                None => {
+                    eprintln!("Could not find a default network interface");
+                    eprintln!("Use 'arp scan -l' to list available interfaces");
+                    process::exit(1);
+                }
+            }
+        }
+    };
+
     let selected_interface: &datalink::NetworkInterface = interfaces.iter()
-        .find(|interface| { interface.name == scan_options.interface_name && interface.is_up() && !interface.is_loopback() })
+        .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
         .unwrap_or_else(|| {
-            eprintln!("Could not find interface with name {}", scan_options.interface_name);
+            eprintln!("Could not find interface with name {}", interface_name);
+            eprintln!("Make sure the interface is up, not loopback and has a valid IPv4");
             process::exit(1);
         });
 
@@ -117,7 +135,6 @@ fn main() {
 
         let estimations = network::compute_scan_estimation(network_size, &scan_options);
         println!("Estimated scan time {}ms ({} bytes, {} bytes/s)", estimations.duration_ms, estimations.request_size, estimations.bandwidth);
-        
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }
 

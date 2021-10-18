@@ -1,6 +1,6 @@
 use std::process;
 
-use pnet::datalink::{self, NetworkInterface};
+use pnet::datalink::NetworkInterface;
 use ipnetwork::{IpNetwork, NetworkSize};
 use serde::Serialize;
 use ansi_term::Color::{Green, Red};
@@ -52,7 +52,7 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
 
     println!();
     println!("Found {} network interfaces, {} seems ready for ARP scans", interface_count, ready_count);
-    if let Some(default_interface) = select_default_interface() {
+    if let Some(default_interface) = select_default_interface(interfaces) {
         println!("Default network interface will be {}", default_interface.name);
     }
     println!();
@@ -62,11 +62,9 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
  * Find a default network interface for scans, based on the operating system
  * priority and some interface technical details.
  */
-pub fn select_default_interface() -> Option<NetworkInterface> {
+pub fn select_default_interface(interfaces: &[NetworkInterface]) -> Option<NetworkInterface> {
 
-    let interfaces = datalink::interfaces();
-
-    interfaces.into_iter().find(|interface| {
+    let default_interface = interfaces.iter().find(|interface| {
 
         if interface.mac.is_none() {
             return false;
@@ -82,7 +80,9 @@ pub fn select_default_interface() -> Option<NetworkInterface> {
         }
 
         true
-    })
+    });
+
+    default_interface.map(|interface| interface.clone())
 }
 
 pub fn compute_network_size(ip_network: &IpNetwork) -> u128 {
