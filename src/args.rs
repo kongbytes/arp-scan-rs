@@ -15,7 +15,7 @@ const REQUEST_MS_INTERVAL: u64 = 10;
 
 const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const EXAMPLES_HELP: &'static str = "EXAMPLES:
+const EXAMPLES_HELP: &str = "EXAMPLES:
 
     List network interfaces
     arp-scan -l
@@ -195,7 +195,7 @@ impl ScanOptions {
             None => ProfileType::Default
         };
 
-        let interface_name = matches.value_of("interface").map(|name| String::from(name));
+        let interface_name = matches.value_of("interface").map(String::from);
 
         let timeout_ms: u64 = match matches.value_of("timeout") {
             Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {

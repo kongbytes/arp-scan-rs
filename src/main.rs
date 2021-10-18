@@ -187,10 +187,10 @@ fn main() {
     // (where T is the timeout option). After the sleep phase, the response
     // thread will receive a stop request through the 'timed_out' mutex.
     let mut sleep_ms_mount: u64 = 0;
-    while finish_sleep.load(Ordering::Relaxed) == false && sleep_ms_mount < scan_options.timeout_ms {
+    while !finish_sleep.load(Ordering::Relaxed) && sleep_ms_mount < scan_options.timeout_ms {
         
         thread::sleep(Duration::from_millis(500));
-        sleep_ms_mount = sleep_ms_mount + 500;
+        sleep_ms_mount += 500;
     }
     timed_out.store(true, Ordering::Relaxed);
 
