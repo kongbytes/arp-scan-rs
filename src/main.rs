@@ -1,5 +1,6 @@
 mod args;
 mod network;
+mod time;
 mod utils;
 mod vendor;
 
@@ -134,7 +135,8 @@ fn main() {
     if scan_options.is_plain_output() {
 
         let estimations = network::compute_scan_estimation(network_size, &scan_options);
-        println!("Estimated scan time {}ms ({} bytes, {} bytes/s)", estimations.duration_ms, estimations.request_size, estimations.bandwidth);
+        let formatted_ms = time::format_milliseconds(estimations.duration_ms);
+        println!("Estimated scan time {} ({} bytes, {} bytes/s)", formatted_ms, estimations.request_size, estimations.bandwidth);
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
     }
 
@@ -142,6 +144,7 @@ fn main() {
     let cloned_finish_sleep = Arc::clone(&finish_sleep);
 
     ctrlc::set_handler(move || {
+        eprintln!("[warn] Receiving halt signal, ending scan with partial results");
         cloned_finish_sleep.store(true, Ordering::Relaxed);
     }).unwrap_or_else(|err| {
         eprintln!("Could not set CTRL+C handler ({})", err);
