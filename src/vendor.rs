@@ -4,12 +4,20 @@ use std::process;
 use pnet::datalink::MacAddr;
 use csv::{Position, Reader};
 
+// The Vendor structure performs search operations on a vendor database to find
+// which MAC address belongs to a specific vendor. All network vendors have a
+// dedicated MAC address range that is registered by the IEEE and maintained in
+// the OUI database. An OUI is a 24-bit globally unique assigned number
+// referenced by various standards.
 pub struct Vendor {
     reader: Option<Reader<File>>,
 }
 
 impl Vendor {
 
+    // Create a new MAC vendor search instance based on the given datebase path
+    // (absolute or relative). A failure will not throw an error, but leave the
+    // vendor search instance without database reader.
     pub fn new(path: &str) -> Self {
 
         let file_result = File::open(path);
@@ -28,6 +36,8 @@ impl Vendor {
         self.reader.is_some()
     }
 
+    // Find a vendor name based on a given MAC address. A vendor search
+    // operation will perform a whole read on the database for now.
     pub fn search_by_mac(&mut self, mac_address: &MacAddr) -> Option<String> {
 
         match &mut self.reader {
