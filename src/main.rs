@@ -47,42 +47,7 @@ fn main() {
         process::exit(1);
     }
 
-    let interface_name = match &scan_options.interface_name {
-        Some(name) => String::from(name),
-        None => {
-
-            let name = utils::select_default_interface(&interfaces).map(|interface| interface.name);
-
-            match name {
-                Some(name) => name,
-                None => {
-                    eprintln!("Could not find a default network interface");
-                    eprintln!("Use 'arp scan -l' to list available interfaces");
-                    process::exit(1);
-                }
-            }
-        }
-    };
-
-    let selected_interface: &datalink::NetworkInterface = interfaces.iter()
-        .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
-        .unwrap_or_else(|| {
-            eprintln!("Could not find interface with name {}", interface_name);
-            eprintln!("Make sure the interface is up, not loopback and has a valid IPv4");
-            process::exit(1);
-        });
-
-    let ip_network = match selected_interface.ips.first() {
-        Some(ip_network) if ip_network.is_ipv4() => ip_network,
-        Some(_) => {
-            eprintln!("Only IPv4 networks supported");
-            process::exit(1);
-        },
-        None => {
-            eprintln!("Expects a valid IP on the interface, none found");
-            process::exit(1);
-        }
-    };
+    let (selected_interface, ip_network) = network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
 

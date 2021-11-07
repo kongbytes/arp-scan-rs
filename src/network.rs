@@ -17,6 +17,7 @@ use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
 
 use crate::args::ScanOptions;
 use crate::vendor::Vendor;
+use crate::utils;
 
 pub const DATALINK_RCV_TIMEOUT: u64 = 500;
 
@@ -57,6 +58,61 @@ pub struct TargetDetails {
     pub mac: MacAddr,
     pub hostname: Option<String>,
     pub vendor: Option<String>
+}
+
+/**
+ * Compute a network configuration based on the scan options and available
+ * interfaces. This configuration will be used in the scan process to target a
+ * specific network on a network interfaces.
+ */
+pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], scan_options: &'a Arc<ScanOptions>) -> (&'a NetworkInterface, &'a IpNetwork) {
+
+    let interface_name = match &scan_options.interface_name {
+        Some(name) => String::from(name),
+        None => {
+
+            let name = utils::select_default_interface(&interfaces).map(|interface| interface.name);
+
+            match name {
+                Some(name) => name,
+                None => {
+                    eprintln!("Could not find a default network interface");
+                    eprintln!("Use 'arp scan -l' to list available interfaces");
+                    process::exit(1);
+                }
+            }
+        }
+    };
+
+    let selected_interface: &NetworkInterface = interfaces.iter()
+        .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
+        .unwrap_or_else(|| {
+            eprintln!("Could not find interface with name {}", interface_name);
+            eprintln!("Make sure the interface is up, not loopback and has a valid IPv4");
+            process::exit(1);
+        });
+
+    let ip_network = match &scan_options.network_range {
+        Some(network_range) => network_range,
+        None => {
+
+            // If no network range given on the CLI, take the first IPv4 network available
+            // on the default network interface.
+            match selected_interface.ips.first() {
+                Some(ip_network) if ip_network.is_ipv4() => ip_network,
+                Some(_) => {
+                    eprintln!("Only IPv4 networks supported");
+                    process::exit(1);
+                },
+                None => {
+                    eprintln!("Expects a valid IP on the interface, none found");
+                    process::exit(1);
+                }
+            }
+        }
+    };
+
+    (selected_interface, ip_network)
 }
 
 /**
