@@ -14,6 +14,7 @@ use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
 use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
+use rand::prelude::*;
 
 use crate::args::ScanOptions;
 use crate::vendor::Vendor;
@@ -65,7 +66,7 @@ pub struct TargetDetails {
  * interfaces. This configuration will be used in the scan process to target a
  * specific network on a network interfaces.
  */
-pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], scan_options: &'a Arc<ScanOptions>) -> (&'a NetworkInterface, &'a IpNetwork) {
+pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], scan_options: &'a Arc<ScanOptions>) -> (&'a NetworkInterface, Vec<&'a IpNetwork>) {
 
     let interface_name = match &scan_options.interface_name {
         Some(name) => String::from(name),
@@ -92,27 +93,14 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
             process::exit(1);
         });
 
-    let ip_network = match &scan_options.network_range {
-        Some(network_range) => network_range,
-        None => {
-
-            // If no network range given on the CLI, take the first IPv4 network available
-            // on the default network interface.
-            match selected_interface.ips.first() {
-                Some(ip_network) if ip_network.is_ipv4() => ip_network,
-                Some(_) => {
-                    eprintln!("Only IPv4 networks supported");
-                    process::exit(1);
-                },
-                None => {
-                    eprintln!("Expects a valid IP on the interface, none found");
-                    process::exit(1);
-                }
-            }
-        }
+    let ip_networks: Vec<&IpNetwork> = match &scan_options.network_range {
+        Some(network_range) => network_range.iter().collect(),
+        None => selected_interface.ips.iter()
+            .filter(|ip_network| ip_network.is_ipv4())
+            .collect()
     };
 
-    (selected_interface, ip_network)
+    (selected_interface, ip_networks)
 }
 
 /**
@@ -153,7 +141,7 @@ pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> 
  * interface and a target IPv4 address. The ARP request will be broadcasted to
  * the whole local network with the first valid IPv4 address on the interface.
  */
-pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, ip_network: &IpNetwork, target_ip: Ipv4Addr, options: Arc<ScanOptions>) {
+pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInterface, source_ip: Ipv4Addr, target_ip: Ipv4Addr, options: Arc<ScanOptions>) {
 
     let mut ethernet_buffer = match options.has_vlan() {
         true => vec![0u8; ETHERNET_VLAN_PACKET_SIZE],
@@ -191,7 +179,7 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
         process::exit(1);
     });
 
-    let source_ipv4 = find_source_ip(ip_network, options.source_ipv4);
+    // let source_ipv4 = find_source_ip(ip_network, options.source_ipv4);
 
     arp_packet.set_hardware_type(options.hw_type.unwrap_or(ArpHardwareTypes::Ethernet));
     arp_packet.set_protocol_type(options.proto_type.unwrap_or(EtherTypes::Ipv4));
@@ -199,7 +187,7 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     arp_packet.set_proto_addr_len(options.proto_addr.unwrap_or(4));
     arp_packet.set_operation(options.arp_operation.unwrap_or(ArpOperations::Request));
     arp_packet.set_sender_hw_addr(source_mac);
-    arp_packet.set_sender_proto_addr(source_ipv4);
+    arp_packet.set_sender_proto_addr(source_ip);
     arp_packet.set_target_hw_addr(target_mac);
     arp_packet.set_target_proto_addr(target_ip);
 
@@ -227,20 +215,44 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
 }
 
 /**
+ * Compute the whole IP range that must be scanned. This includes every IP
+ * address contained in the ip_networks argument. Based on the scan options,
+ * this list may be randomized to enhance scans.
+ */
+pub fn compute_ip_range(ip_networks: &[&IpNetwork], scan_options: &Arc<ScanOptions>) -> Vec<IpAddr> {
+
+    ip_networks.iter().fold(vec![], |accumulator, ip_network| {
+
+        let ip_addresses = match scan_options.randomize_targets {
+            true => {
+                let mut rng = rand::thread_rng();
+                let mut shuffled_addresses: Vec<IpAddr> = ip_network.iter().collect();
+                shuffled_addresses.shuffle(&mut rng);
+                shuffled_addresses
+            },
+            false => ip_network.iter().collect()
+        };
+
+        [accumulator, ip_addresses].concat()
+    })
+}
+
+/**
  * Find the most adequate IPv4 address on a given network interface for sending
  * ARP requests. If the 'forced_source_ipv4' parameter is set, it will take
  * the priority over the network interface address.
  */
-fn find_source_ip(ip_network: &IpNetwork, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
+pub fn find_source_ip(network_interface: &NetworkInterface, forced_source_ipv4: Option<Ipv4Addr>) -> Ipv4Addr {
 
     if let Some(forced_ipv4) = forced_source_ipv4 {
         return forced_ipv4;
     }
 
-    match ip_network.ip() {
-        IpAddr::V4(ipv4_addr) => ipv4_addr,
-        IpAddr::V6(_ipv6_addr) => {
-            eprintln!("Expected IPv4 address on network interface, found IPv6");
+    let potential_network = network_interface.ips.iter().find(|network| network.is_ipv4());
+    match potential_network.map(|network| network.ip()) {
+        Some(IpAddr::V4(ipv4_addr)) => ipv4_addr,
+        _ => {
+            eprintln!("Expected IPv4 address on network interface");
             process::exit(1);
         }
     }
