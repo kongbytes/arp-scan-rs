@@ -113,6 +113,10 @@ A scan profile groups together a set of ARP scan options to perform a specific s
 
 Perform a scan on the network interface `eth0`. The first valid IPv4 network on this interface will be used as scan target. By default, the first network interface with an `up` status and a valid IPv4 will be selected.
 
+#### Set IPv4 network range `-n 172.17.0.0/24`
+
+By default, the scan process will select the first IPv4 network on the interface and start a scan on the whole range. With the `--network` option, an IPv4 network can be defined _(this may be used for specific scans on a subset of network targets)_.
+
 #### Set global scan timeout `-t 15s`
 
 Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2000ms`.
@@ -121,7 +125,7 @@ Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans
 
 By default, a `10ms` gap will be set between ARP requests to avoid an ARP storm on the network. This value can be changed to reduce or increase the milliseconds between each ARP request.
 
-#### Numeric mode `-n`
+#### Numeric mode `--numeric`
 
 Switch to numeric mode. This will skip the local hostname resolution process and will only display IP addresses.
 

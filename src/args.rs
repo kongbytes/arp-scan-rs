@@ -1,8 +1,10 @@
+use std::str::FromStr;
 use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
+use ipnetwork::IpNetwork;
 use pnet::datalink::MacAddr;
 use pnet::packet::arp::{ArpHardwareType, ArpOperation};
 use pnet::packet::ethernet::EtherType;
@@ -50,6 +52,11 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
                 .help("Network interface")
         )
         .arg(
+            Arg::with_name("network").short("n").long("network")
+                .takes_value(true).value_name("NETWORK_RANGE")
+                .help("Network range to scan")
+        )
+        .arg(
             Arg::with_name("timeout").short("t").long("timeout")
                 .takes_value(true).value_name("TIMEOUT_DURATION")
                 .help("ARP response timeout")
@@ -70,7 +77,7 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
                 .help("Source MAC address for requests")
         )
         .arg(
-            Arg::with_name("numeric").short("n").long("numeric")
+            Arg::with_name("numeric").long("numeric")
                 .takes_value(false)
                 .help("Numeric mode, no hostname resolution")
         )
@@ -153,6 +160,7 @@ pub enum ProfileType {
 pub struct ScanOptions {
     pub profile: ProfileType,
     pub interface_name: Option<String>,
+    pub network_range: Option<ipnetwork::IpNetwork>,
     pub timeout_ms: u64,
     pub resolve_hostname: bool,
     pub source_ipv4: Option<Ipv4Addr>,
@@ -198,6 +206,16 @@ impl ScanOptions {
         };
 
         let interface_name = matches.value_of("interface").map(String::from);
+
+        let network_range: Option<IpNetwork> = matches.value_of("network").map(|raw_range: &str| {
+            match IpNetwork::from_str(raw_range) {
+                Ok(parsed_network) => parsed_network,
+                Err(err) => {
+                    eprintln!("Expected valid IPv4 network range ({})", err);
+                    process::exit(1);
+                }
+            }
+        });
 
         let timeout_ms: u64 = match matches.value_of("timeout") {
             Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {
@@ -394,6 +412,7 @@ impl ScanOptions {
         Arc::new(ScanOptions {
             profile,
             interface_name,
+            network_range,
             timeout_ms,
             resolve_hostname,
             source_ipv4,
