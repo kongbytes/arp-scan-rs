@@ -12,7 +12,6 @@ use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use pnet::datalink;
-use rand::prelude::*;
 
 use crate::args::{ScanOptions, OutputFormat};
 use crate::vendor::Vendor;
@@ -47,12 +46,14 @@ fn main() {
         process::exit(1);
     }
 
-    let (selected_interface, ip_network) = network::compute_network_configuration(&interfaces, &scan_options);
+    let (selected_interface, ip_networks) = network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
 
+        let network_list = ip_networks.iter().map(|network| format!("{}", network)).collect::<Vec<String>>().join(", ");
+
         println!();
-        println!("Selected interface {} with IP {}", selected_interface.name, ip_network);
+        println!("Selected interface {} with IP {}", selected_interface.name, network_list);
         if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
             println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
         }
@@ -95,7 +96,7 @@ fn main() {
     let cloned_options = Arc::clone(&scan_options);
     let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out, &mut vendor_list));
 
-    let network_size = utils::compute_network_size(&ip_network);
+    let network_size = utils::compute_network_size(&ip_networks);
 
     if scan_options.is_plain_output() {
 
@@ -128,15 +129,8 @@ fn main() {
         // network iterator exposed by 'ipnetwork': memory usage. Instead of
         // using a small memory footprint iterator, we have to store all IP
         // addresses in memory at once. This can cause problems on large ranges.
-        let ip_addresses: Vec<IpAddr> = match scan_options.randomize_targets {
-            true => {
-                let mut rng = rand::thread_rng();
-                let mut shuffled_addresses: Vec<IpAddr> = ip_network.iter().collect();
-                shuffled_addresses.shuffle(&mut rng);
-                shuffled_addresses
-            },
-            false => ip_network.iter().collect()
-        };
+        let ip_addresses: Vec<IpAddr> = network::compute_ip_range(&ip_networks, &scan_options);
+        let source_ip = network::find_source_ip(selected_interface, scan_options.source_ipv4);
 
         for ip_address in ip_addresses {
 
@@ -145,7 +139,7 @@ fn main() {
             }
 
             if let IpAddr::V4(ipv4_address) = ip_address {
-                network::send_arp_request(&mut tx, selected_interface, &ip_network, ipv4_address, Arc::clone(&scan_options));
+                network::send_arp_request(&mut tx, selected_interface, source_ip, ipv4_address, Arc::clone(&scan_options));
                 thread::sleep(Duration::from_millis(scan_options.interval_ms));
             }
         }

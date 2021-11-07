@@ -160,7 +160,7 @@ pub enum ProfileType {
 pub struct ScanOptions {
     pub profile: ProfileType,
     pub interface_name: Option<String>,
-    pub network_range: Option<ipnetwork::IpNetwork>,
+    pub network_range: Option<Vec<ipnetwork::IpNetwork>>,
     pub timeout_ms: u64,
     pub resolve_hostname: bool,
     pub source_ipv4: Option<Ipv4Addr>,
@@ -207,14 +207,20 @@ impl ScanOptions {
 
         let interface_name = matches.value_of("interface").map(String::from);
 
-        let network_range: Option<IpNetwork> = matches.value_of("network").map(|raw_range: &str| {
-            match IpNetwork::from_str(raw_range) {
-                Ok(parsed_network) => parsed_network,
-                Err(err) => {
-                    eprintln!("Expected valid IPv4 network range ({})", err);
-                    process::exit(1);
+        let network_range: Option<Vec<IpNetwork>> = matches.value_of("network").map(|raw_ranges: &str| {
+
+            let splitted_ranged = raw_ranges.split(',');
+            splitted_ranged.map(|raw_range| {
+
+                match IpNetwork::from_str(raw_range) {
+                    Ok(parsed_network) => parsed_network,
+                    Err(err) => {
+                        eprintln!("Expected valid IPv4 network range ({})", err);
+                        process::exit(1);
+                    }
                 }
-            }
+
+            }).collect()
         });
 
         let timeout_ms: u64 = match matches.value_of("timeout") {

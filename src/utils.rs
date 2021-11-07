@@ -85,15 +85,19 @@ pub fn select_default_interface(interfaces: &[NetworkInterface]) -> Option<Netwo
     default_interface.cloned()
 }
 
-pub fn compute_network_size(ip_network: &IpNetwork) -> u128 {
+pub fn compute_network_size(ip_networks: &[&IpNetwork]) -> u128 {
 
-    match ip_network.size() {
-        NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
-        NetworkSize::V6(_) => {
-            eprintln!("IPv6 networks are not supported by the ARP protocol");
-            process::exit(1);
-        }
-    }
+    ip_networks.iter().fold(0u128, |total_size, ip_network| {
+
+        let network_size: u128 = match ip_network.size() {
+            NetworkSize::V4(ipv4_network_size) => ipv4_network_size.into(),
+            NetworkSize::V6(_) => {
+                eprintln!("IPv6 networks are not supported by the ARP protocol");
+                process::exit(1);
+            }
+        };
+        total_size + network_size
+    })
 }
 
 /**
