@@ -125,9 +125,11 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         }
     }
 
-    println!();
-    println!("| IPv4            | MAC               | {: <h_max$} | {: <v_max$} |", "Hostname", "Vendor", h_max=hostname_len, v_max=vendor_len);
-    println!("|-----------------|-------------------|-{:-<h_max$}-|-{:-<v_max$}-|", "", "", h_max=hostname_len, v_max=vendor_len);
+    if target_details.len() > 0 {
+        println!();
+        println!("| IPv4            | MAC               | {: <h_max$} | {: <v_max$} |", "Hostname", "Vendor", h_max=hostname_len, v_max=vendor_len);
+        println!("|-----------------|-------------------|-{:-<h_max$}-|-{:-<v_max$}-|", "", "", h_max=hostname_len, v_max=vendor_len);
+    }
 
     for detail in target_details.iter() {
 
@@ -147,7 +149,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     print!("ARP scan finished, ");
     let target_count = target_details.len();
     match target_count {
-        0 => print!("no hosts found"),
+        0 => print!("{}", Red.paint("no hosts found")),
         1 => print!("1 host found"),
         _ => print!("{} hosts found", target_count)
     }
