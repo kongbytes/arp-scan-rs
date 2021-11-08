@@ -271,3 +271,36 @@ pub fn export_to_yaml(response_summary: ResponseSummary, mut target_details: Vec
         process::exit(1);
     })
 }
+
+/**
+ * Export the scan results as a CSV string with response details (timings, ...)
+ * and ARP results from the local network.
+ */
+pub fn export_to_csv(response_summary: ResponseSummary, mut target_details: Vec<TargetDetails>) -> String {
+
+    target_details.sort_by_key(|item| item.ipv4);
+
+    let global_result = get_serializable_result(response_summary, target_details);
+
+    let mut wtr = csv::Writer::from_writer(vec![]);
+
+    for result in global_result.results {
+        wtr.serialize(result).unwrap_or_else(|err| {
+            eprintln!("Could not serialize result to CSV ({})", err);
+            process::exit(1);
+        });
+    }
+    wtr.flush().unwrap_or_else(|err| {
+        eprintln!("Could not flush CSV writer buffer ({})", err);
+        process::exit(1);
+    });
+
+    let convert_writer = wtr.into_inner().unwrap_or_else(|err| {
+        eprintln!("Could not convert final CSV result ({})", err);
+        process::exit(1);
+    });
+    String::from_utf8(convert_writer).unwrap_or_else(|err| {
+        eprintln!("Could not convert final CSV result to text ({})", err);
+        process::exit(1);
+    })
+}

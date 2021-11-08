@@ -155,7 +155,8 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
 pub enum OutputFormat {
     Plain,
     Json,
-    Yaml
+    Yaml,
+    Csv
 }
 
 pub enum ProfileType {
@@ -364,6 +365,7 @@ impl ScanOptions {
                     "json" => OutputFormat::Json,
                     "yaml" => OutputFormat::Yaml,
                     "plain" | "text" => OutputFormat::Plain,
+                    "csv" => OutputFormat::Csv,
                     _ => {
                         eprintln!("Expected correct output format (json/yaml/plain)");
                         process::exit(1);
