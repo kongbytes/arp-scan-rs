@@ -110,6 +110,12 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
                 .help("Milliseconds between ARP requests")
         )
         .arg(
+            Arg::with_name("bandwidth").short("B").long("bandwidth")
+                .takes_value(true).value_name("BITS")
+                .conflicts_with("interval")
+                .help("Limit scan bandwidth (bits/second)")
+        )
+        .arg(
             Arg::with_name("oui-file").long("oui-file")
                 .takes_value(true).value_name("FILE_PATH")
                 .help("Path to custom IEEE OUI CSV file")
@@ -166,6 +172,11 @@ pub enum ProfileType {
     Chaos
 }
 
+pub enum ScanTiming {
+    Interval(u64),
+    Bandwidth(u64)
+}
+
 pub struct ScanOptions {
     pub profile: ProfileType,
     pub interface_name: Option<String>,
@@ -177,7 +188,7 @@ pub struct ScanOptions {
     pub destination_mac: Option<MacAddr>,
     pub vlan_id: Option<u16>,
     pub retry_count: usize,
-    pub interval_ms: u64,
+    pub scan_timing: ScanTiming,
     pub randomize_targets: bool,
     pub output: OutputFormat,
     pub oui_file: String,
@@ -229,6 +240,28 @@ impl ScanOptions {
 
             }).collect()
         })
+    }
+
+    fn compute_interval(matches: &ArgMatches, profile: &ProfileType) -> ScanTiming {
+
+        match (matches.value_of("bandwidth"), matches.value_of("interval")) {
+            (Some(bandwidth_text), None) => {
+                let bits_second: u64 = bandwidth_text.parse().unwrap_or_else(|err| {
+                    eprintln!("Expected positive number, {}", err);
+                    process::exit(1);
+                });
+                ScanTiming::Bandwidth(bits_second)
+            },
+            (None, Some(interval_text)) => parse_to_milliseconds(interval_text).map(ScanTiming::Interval).unwrap_or_else(|err| {
+                eprintln!("Expected correct interval, {}", err);
+                process::exit(1);
+            }),
+            _ => match profile {
+                ProfileType::Stealth => ScanTiming::Interval(REQUEST_MS_INTERVAL * 2),
+                ProfileType::Fast => ScanTiming::Interval(0),
+                _ => ScanTiming::Interval(REQUEST_MS_INTERVAL)
+            }
+        }
     }
     
     /**
@@ -346,17 +379,7 @@ impl ScanOptions {
             }
         };
 
-        let interval_ms: u64 = match matches.value_of("interval") {
-            Some(interval_text) => parse_to_milliseconds(interval_text).unwrap_or_else(|err| {
-                eprintln!("Expected correct interval, {}", err);
-                process::exit(1);
-            }),
-            None => match profile {
-                ProfileType::Stealth => REQUEST_MS_INTERVAL * 2,
-                ProfileType::Fast => 0,
-                _ => REQUEST_MS_INTERVAL
-            }
-        };
+        let scan_timing: ScanTiming = ScanOptions::compute_interval(matches, &profile);
 
         let output = match matches.value_of("output") {
             Some(output_request) => {
@@ -463,7 +486,7 @@ impl ScanOptions {
             source_mac,
             vlan_id,
             retry_count,
-            interval_ms,
+            scan_timing,
             randomize_targets,
             output,
             oui_file,
