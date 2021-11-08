@@ -90,7 +90,7 @@ pub fn select_default_interface(interfaces: &[NetworkInterface]) -> Option<Netwo
  * Display scan settings before launching an ARP scan. This includes network
  * details (IP range, interface, ...) and timing informations.
  */
-pub fn display_prescan_details(ip_networks: &Vec<&IpNetwork>, selected_interface: &NetworkInterface, scan_options: Arc<ScanOptions>) -> () {
+pub fn display_prescan_details(ip_networks: &[&IpNetwork], selected_interface: &NetworkInterface, scan_options: Arc<ScanOptions>) {
     
     let mut network_list = ip_networks.iter().take(5).map(|network| network.to_string()).collect::<Vec<String>>().join(", ");
     if ip_networks.len() > 5 {

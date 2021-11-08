@@ -88,12 +88,14 @@ fn main() {
 
     let network_size = utils::compute_network_size(&ip_networks);
 
+    let estimations = network::compute_scan_estimation(network_size, &scan_options);
+    let interval_ms = estimations.interval_ms;
+
     if scan_options.is_plain_output() {
 
-        let estimations = network::compute_scan_estimation(network_size, &scan_options);
         let formatted_ms = time::format_milliseconds(estimations.duration_ms);
         println!("Estimated scan time {} ({} bytes, {} bytes/s)", formatted_ms, estimations.request_size, estimations.bandwidth);
-        println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, scan_options.interval_ms);
+        println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, interval_ms);
     }
 
     let finish_sleep = Arc::new(AtomicBool::new(false));
@@ -130,7 +132,7 @@ fn main() {
 
             if let IpAddr::V4(ipv4_address) = ip_address {
                 network::send_arp_request(&mut tx, selected_interface, source_ip, ipv4_address, Arc::clone(&scan_options));
-                thread::sleep(Duration::from_millis(scan_options.interval_ms));
+                thread::sleep(Duration::from_millis(interval_ms));
             }
         }
     }

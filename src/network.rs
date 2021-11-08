@@ -19,6 +19,7 @@ use rand::prelude::*;
 use crate::args::ScanOptions;
 use crate::vendor::Vendor;
 use crate::utils;
+use crate::args::ScanTiming;
 
 pub const DATALINK_RCV_TIMEOUT: u64 = 500;
 
@@ -34,6 +35,7 @@ const ETHERNET_VLAN_PACKET_SIZE: usize = 46;
  * starts and should give insights about the scan.
  */
 pub struct ScanEstimation {
+    pub interval_ms: u64,
     pub duration_ms: u128,
     pub request_size: u128,
     pub bandwidth: u128
@@ -110,7 +112,6 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
  */
 pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> ScanEstimation {
 
-    let interval: u128 = options.interval_ms.into();
     let timeout: u128 = options.timeout_ms.into();
     let packet_size: u128 = match options.has_vlan() {
         true => ETHERNET_VLAN_PACKET_SIZE.try_into().expect("Internal number conversion failed for VLAN packet size"),
@@ -120,16 +121,35 @@ pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> 
 
     // The values below are averages based on an amount of performed network
     // scans. This may of course vary based on network configurations.
-    let avg_arp_request_ms = 3;
+    let avg_arp_request_ms: u128 = 3;
     let avg_resolve_ms = 500;
 
-    let request_phase_ms = (host_count * (avg_arp_request_ms+ interval)) * retry_count;
-    let duration_ms = request_phase_ms + timeout + avg_resolve_ms;
-    let request_size = host_count * packet_size;
+    let request_size: u128 = host_count * packet_size;
 
-    let bandwidth = (request_size * 1000) / request_phase_ms;
+    let (interval_ms, bandwidth, request_phase_ms): (u64, u128, u128) = match options.scan_timing {
+        ScanTiming::Bandwidth(bandwidth) => {
+
+            let bandwidth_lg: u128 = bandwidth.into();
+            let request_phase_ms: u128 = (request_size * 1000) as u128 / bandwidth_lg;
+            let interval_ms: u128 = (request_phase_ms/retry_count/host_count) - avg_arp_request_ms;
+            
+            (interval_ms.try_into().unwrap(), bandwidth_lg, request_phase_ms)
+
+        },
+        ScanTiming::Interval(interval) => {
+
+            let interval_ms_lg: u128 = interval.into();
+            let request_phase_ms: u128 = (host_count * (avg_arp_request_ms + interval_ms_lg)) * retry_count;
+            let bandwidth = (request_size * 1000) / request_phase_ms;
+
+            (interval, bandwidth, request_phase_ms)
+        }
+    };
+    
+    let duration_ms = request_phase_ms + timeout + avg_resolve_ms;
 
     ScanEstimation {
+        interval_ms,
         duration_ms,
         request_size,
         bandwidth
