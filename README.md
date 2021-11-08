@@ -11,7 +11,7 @@ Find all hosts in your local network using this fast ARP scanner. The CLI is wri
 
 ✔ MAC vendor search
 
-✔ JSON & YAML exports
+✔ JSON, YAML & CSV exports
 
 ✔ Pre-defined scan profiles (default, fast, stealth & chaos)
 
@@ -63,7 +63,7 @@ ARP scan finished, 5 hosts found in 1.623 seconds
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.11.0/arp-scan-v0.11.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.12.0/arp-scan-v0.12.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 List all available network interfaces.
@@ -121,9 +121,13 @@ By default, the scan process will select the first IPv4 network on the interface
 
 Enforce a timeout of at least 15 seconds. This timeout is a minimum value (scans may take a little more time). Default value is `2000ms`.
 
-#### Change ARP request interval `-I 30ms`
+#### Change ARP request interval `-I 39ms`
 
 By default, a `10ms` gap will be set between ARP requests to avoid an ARP storm on the network. This value can be changed to reduce or increase the milliseconds between each ARP request.
+
+#### Enforce scan bandwidth limit `-B 1000`
+
+Enforce a bandwidth limit (expressed in bits per second) on ARP scans. The `--bandwidth` option conflicts with `--interval` since these 2 arguments change the same parameter underneath.
 
 #### Numeric mode `--numeric`
 
@@ -179,7 +183,7 @@ Change the ARP protocol address length field, this can cause scan failure.
 
 #### Set output format `-o json`
 
-Set the output format to either `plain` (a full-text output with tables), `json` or `yaml`.
+Set the output format to either `plain` (a full-text output with tables), `json`, `yaml` or `csv`.
 
 #### Show version `--version`
 
@@ -201,9 +205,9 @@ The features below will be shipped in the next releases of the project.
 - ~~Fine-grained scan timings (interval)~~ - released in 0.8.0
 - Wide network range support
 - ~~Partial results on SIGINT~~ - released in 0.11.0
-- Read network targets from file
+- ~~Read network targets from file~~ - released in 0.12.0
 - Adding advanced packet options (padding, LLC, ...)
-- Enable bandwith control (exclusive with interval)
+- ~~Enable bandwith control (exclusive with interval)~~ - released in 0.12.0
 - Stronger profile defaults (chaos & stealth)
 - Avoid packet copy in userspace for daster scans (BPF filtering)
 
