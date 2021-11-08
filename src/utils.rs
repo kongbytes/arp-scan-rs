@@ -1,4 +1,5 @@
 use std::process;
+use std::sync::Arc;
 
 use pnet::datalink::NetworkInterface;
 use ipnetwork::{IpNetwork, NetworkSize};
@@ -85,6 +86,28 @@ pub fn select_default_interface(interfaces: &[NetworkInterface]) -> Option<Netwo
     default_interface.cloned()
 }
 
+/**
+ * Display scan settings before launching an ARP scan. This includes network
+ * details (IP range, interface, ...) and timing informations.
+ */
+pub fn display_prescan_details(ip_networks: &Vec<&IpNetwork>, selected_interface: &NetworkInterface, scan_options: Arc<ScanOptions>) -> () {
+    
+    let mut network_list = ip_networks.iter().take(5).map(|network| network.to_string()).collect::<Vec<String>>().join(", ");
+    if ip_networks.len() > 5 {
+        let more_text = format!(" ({} more)", ip_networks.len()-5);
+        network_list.push_str(&more_text);
+    }
+
+    println!();
+    println!("Selected interface {} with IP {}", selected_interface.name, network_list);
+    if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
+        println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
+    }
+    if let Some(forced_destination_mac) = scan_options.destination_mac {
+        println!("The ARP destination MAC will be forced to {}", forced_destination_mac);
+    }
+}
+
 pub fn compute_network_size(ip_networks: &[&IpNetwork]) -> u128 {
 
     ip_networks.iter().fold(0u128, |total_size, ip_network| {
@@ -125,7 +148,7 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
         }
     }
 
-    if target_details.len() > 0 {
+    if !target_details.is_empty() {
         println!();
         println!("| IPv4            | MAC               | {: <h_max$} | {: <v_max$} |", "Hostname", "Vendor", h_max=hostname_len, v_max=vendor_len);
         println!("|-----------------|-------------------|-{:-<h_max$}-|-{:-<v_max$}-|", "", "", h_max=hostname_len, v_max=vendor_len);

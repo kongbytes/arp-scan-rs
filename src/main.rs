@@ -49,17 +49,7 @@ fn main() {
     let (selected_interface, ip_networks) = network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
-
-        let network_list = ip_networks.iter().map(|network| format!("{}", network)).collect::<Vec<String>>().join(", ");
-
-        println!();
-        println!("Selected interface {} with IP {}", selected_interface.name, network_list);
-        if let Some(forced_source_ipv4) = scan_options.source_ipv4 {
-            println!("The ARP source IPv4 will be forced to {}", forced_source_ipv4);
-        }
-        if let Some(forced_destination_mac) = scan_options.destination_mac {
-            println!("The ARP destination MAC will be forced to {}", forced_destination_mac);
-        }
+        utils::display_prescan_details(&ip_networks, selected_interface, scan_options.clone());
     }
 
     // Start ARP scan operation

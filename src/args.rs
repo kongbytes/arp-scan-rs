@@ -2,6 +2,8 @@ use std::str::FromStr;
 use std::net::Ipv4Addr;
 use std::process;
 use std::sync::Arc;
+use std::path::Path;
+use std::fs;
 
 use clap::{Arg, ArgMatches, App};
 use ipnetwork::IpNetwork;
@@ -55,6 +57,12 @@ pub fn build_args<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("network").short("n").long("network")
                 .takes_value(true).value_name("NETWORK_RANGE")
                 .help("Network range to scan")
+        )
+        .arg(
+            Arg::with_name("file").short("f").long("file")
+                .takes_value(true).value_name("FILE_PATH")
+                .conflicts_with("network")
+                .help("Read IPv4 addresses from a file")
         )
         .arg(
             Arg::with_name("timeout").short("t").long("timeout")
@@ -180,6 +188,47 @@ pub struct ScanOptions {
 }
 
 impl ScanOptions {
+
+    fn compute_networks(matches: &ArgMatches) -> Option<Vec<IpNetwork>> {
+        
+        let network_options = (matches.value_of("file"), matches.value_of("network"));
+        let ranges: Option<Vec<String>> = match network_options {
+            (Some(file_path), None) => {
+
+                let path = Path::new(file_path);
+                match fs::read_to_string(path) {
+                    Ok(content) => {
+                        Some(content.lines().map(|line| line.to_string()).collect())
+                    }
+                    Err(err) => {
+                        eprintln!("Could not open file {}", file_path);
+                        eprintln!("{}", err);
+                        process::exit(1);
+                    }
+                }
+
+            },
+            (None, Some(raw_ranges)) => {
+                Some(raw_ranges.split(',').map(|line| line.to_string()).collect())
+            },
+            _ => None
+        };
+
+        ranges.map(|range_vec| {
+
+            range_vec.iter().map(|raw_range| {
+
+                match IpNetwork::from_str(raw_range) {
+                    Ok(parsed_network) => parsed_network,
+                    Err(err) => {
+                        eprintln!("Expected valid IPv4 network range ({})", err);
+                        process::exit(1);
+                    }
+                }
+
+            }).collect()
+        })
+    }
     
     /**
      * Build a new 'ScanOptions' struct that will be used in the whole CLI such
@@ -207,21 +256,7 @@ impl ScanOptions {
 
         let interface_name = matches.value_of("interface").map(String::from);
 
-        let network_range: Option<Vec<IpNetwork>> = matches.value_of("network").map(|raw_ranges: &str| {
-
-            let splitted_ranged = raw_ranges.split(',');
-            splitted_ranged.map(|raw_range| {
-
-                match IpNetwork::from_str(raw_range) {
-                    Ok(parsed_network) => parsed_network,
-                    Err(err) => {
-                        eprintln!("Expected valid IPv4 network range ({})", err);
-                        process::exit(1);
-                    }
-                }
-
-            }).collect()
-        });
+        let network_range = ScanOptions::compute_networks(matches);
 
         let timeout_ms: u64 = match matches.value_of("timeout") {
             Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {
