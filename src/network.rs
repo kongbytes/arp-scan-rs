@@ -126,6 +126,11 @@ pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> 
 
     let request_size: u128 = host_count * packet_size;
 
+    // Either the user provides an interval (expressed in milliseconds), either
+    // he provides a bandwidth (in bits per second) or either we are using the
+    // default interval. The goal of the code below is to compute the interval
+    // & bandwidth, based on the given inputs. Note that the computations in
+    // each match arm are therefore linked (but rewritten, based on the inputs).
     let (interval_ms, bandwidth, request_phase_ms): (u64, u128, u128) = match options.scan_timing {
         ScanTiming::Bandwidth(bandwidth) => {
 
@@ -198,8 +203,6 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
         eprintln!("Could not build ARP packet");
         process::exit(1);
     });
-
-    // let source_ipv4 = find_source_ip(ip_network, options.source_ipv4);
 
     arp_packet.set_hardware_type(options.hw_type.unwrap_or(ArpHardwareTypes::Ethernet));
     arp_packet.set_protocol_type(options.proto_type.unwrap_or(EtherTypes::Ipv4));
