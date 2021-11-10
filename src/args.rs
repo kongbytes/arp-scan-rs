@@ -201,48 +201,61 @@ pub struct ScanOptions {
 
 impl ScanOptions {
 
-    fn compute_networks(matches: &ArgMatches) -> Option<Vec<IpNetwork>> {
-        
-        let network_options = (matches.value_of("file"), matches.value_of("network"));
-        let ranges: Option<Vec<String>> = match network_options {
+    fn list_required_networks(file_value: Option<&str>, network_value: Option<&str>) -> Result<Option<Vec<String>>, String> {
+
+        let network_options = (file_value, network_value);
+        match network_options {
             (Some(file_path), None) => {
 
                 let path = Path::new(file_path);
-                match fs::read_to_string(path) {
-                    Ok(content) => {
-                        Some(content.lines().map(|line| line.to_string()).collect())
-                    }
-                    Err(err) => {
-                        eprintln!("Could not open file {}", file_path);
-                        eprintln!("{}", err);
-                        process::exit(1);
-                    }
-                }
+                fs::read_to_string(path).map(|content| {
+                    Some(content.lines().map(|line| line.to_string()).collect())
+                }).map_err(|err| {
+                    format!("Could not open file {} - {}", file_path, err)
+                })
 
             },
             (None, Some(raw_ranges)) => {
-                Some(raw_ranges.split(',').map(|line| line.to_string()).collect())
+                Ok(Some(raw_ranges.split(',').map(|line| line.to_string()).collect()))
             },
-            _ => None
-        };
-
-        ranges.map(|range_vec| {
-
-            range_vec.iter().map(|raw_range| {
-
-                match IpNetwork::from_str(raw_range) {
-                    Ok(parsed_network) => parsed_network,
-                    Err(err) => {
-                        eprintln!("Expected valid IPv4 network range ({})", err);
-                        process::exit(1);
-                    }
-                }
-
-            }).collect()
-        })
+            _ => Ok(None)
+        }
     }
 
-    fn compute_interval(matches: &ArgMatches, profile: &ProfileType) -> ScanTiming {
+    /**
+     * Computes the whole network range requested by the user through CLI
+     * arguments or files. This method will fail of a failure has been detected
+     * (either on the IO level or the network syntax parsing)
+     */
+    fn compute_networks(file_value: Option<&str>, network_value: Option<&str>) -> Result<Option<Vec<IpNetwork>>, String> {
+
+        let required_networks: Option<Vec<String>> = ScanOptions::list_required_networks(file_value, network_value)?;
+        if let None = required_networks {
+            return Ok(None);
+        }
+
+        let mut networks: Vec<IpNetwork> = vec![];
+        for network_text in required_networks.unwrap() {
+
+            match IpNetwork::from_str(&network_text) {
+                Ok(parsed_network) => {
+                    networks.push(parsed_network);
+                    Ok(())
+                },
+                Err(err) => {
+                    Err(format!("Expected valid IPv4 network range ({})", err))
+                }
+            }?;
+        }
+        Ok(Some(networks))
+    }
+
+    /**
+     * Computes scan timing constraints, as requested by the user through CLI
+     * arguments. The scan timing constraints will be either expressed in bandwidth
+     * (bits per second) or interval between ARP requests (in milliseconds).
+     */
+    fn compute_scan_timing(matches: &ArgMatches, profile: &ProfileType) -> ScanTiming {
 
         match (matches.value_of("bandwidth"), matches.value_of("interval")) {
             (Some(bandwidth_text), None) => {
@@ -290,7 +303,11 @@ impl ScanOptions {
 
         let interface_name = matches.value_of("interface").map(String::from);
 
-        let network_range = ScanOptions::compute_networks(matches);
+        let network_range = ScanOptions::compute_networks(matches.value_of("file"), matches.value_of("network")).unwrap_or_else(|err| {
+            eprintln!("Could not compute requested network range to scan");
+            eprintln!("{}", err);
+            process::exit(1);
+        });
 
         let timeout_ms: u64 = match matches.value_of("timeout") {
             Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {
@@ -379,7 +396,7 @@ impl ScanOptions {
             }
         };
 
-        let scan_timing: ScanTiming = ScanOptions::compute_interval(matches, &profile);
+        let scan_timing: ScanTiming = ScanOptions::compute_scan_timing(matches, &profile);
 
         let output = match matches.value_of("output") {
             Some(output_request) => {
@@ -506,6 +523,123 @@ impl ScanOptions {
     pub fn has_vlan(&self) -> bool {
 
         matches!(&self.vlan_id, Some(_)) 
+    }
+
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use ipnetwork::Ipv4Network;
+
+    #[test]
+    fn should_have_no_network_default() {
+        
+        let networks = ScanOptions::compute_networks(None, None);
+        assert_eq!(networks, Ok(None));
+    }
+
+    #[test]
+    fn should_handle_single_ipv4_arg() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("192.168.1.20"));
+
+        let target_network: Vec<IpNetwork> = vec![
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 20), 32).unwrap()
+            )
+        ];
+
+        assert_eq!(networks, Ok(Some(target_network)));
+    }
+
+    #[test]
+    fn should_handle_multiple_ipv4_arg() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("192.168.1.20,192.168.1.50"));
+
+        let target_network: Vec<IpNetwork> = vec![
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 20), 32).unwrap()
+            ),
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 50), 32).unwrap()
+            )
+        ];
+
+        assert_eq!(networks, Ok(Some(target_network)));
+    }
+
+    #[test]
+    fn should_handle_single_network_arg() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("192.168.1.0/24"));
+
+        let target_network: Vec<IpNetwork> = vec![
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 0), 24).unwrap()
+            )
+        ];
+
+        assert_eq!(networks, Ok(Some(target_network)));
+    }
+
+    #[test]
+    fn should_handle_network_mix_arg() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("192.168.20.1,192.168.1.0/24,192.168.5.4/28"));
+
+        let target_network: Vec<IpNetwork> = vec![
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 20, 1), 32).unwrap()
+            ),
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 0), 24).unwrap()
+            ),
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 5, 4), 28).unwrap()
+            )
+        ];
+
+        assert_eq!(networks, Ok(Some(target_network)));
+    }
+
+    #[test]
+    fn should_handle_file_input() {
+        
+        let networks = ScanOptions::compute_networks(Some("./data/ip-list.txt"), None);
+
+        let target_network: Vec<IpNetwork> = vec![
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 1), 32).unwrap()
+            ),
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 2), 32).unwrap()
+            ),
+            IpNetwork::V4(
+                Ipv4Network::new(Ipv4Addr::new(192, 168, 2, 0), 29).unwrap()
+            )
+        ];
+
+        assert_eq!(networks, Ok(Some(target_network)));
+    }
+
+    #[test]
+    fn should_fail_incorrect_network() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("500.10.10.10/24"));
+
+        assert_eq!(networks, Err("Expected valid IPv4 network range (invalid address: 500.10.10.10/24)".to_string()));
+    }
+
+    #[test]
+    fn should_fail_unreadable_network() {
+        
+        let networks = ScanOptions::compute_networks(None, Some("no-network"));
+
+        assert_eq!(networks, Err("Expected valid IPv4 network range (invalid address: no-network)".to_string()));
     }
 
 }
