@@ -42,7 +42,7 @@ fn main() {
     let scan_options = ScanOptions::new(&matches);
     
     if !utils::is_root_user() {
-        eprintln!("Should run this binary as root");
+        eprintln!("Should run this binary as root or use --help for options");
         process::exit(1);
     }
 

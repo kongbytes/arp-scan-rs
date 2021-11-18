@@ -117,7 +117,10 @@ pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> 
         true => ETHERNET_VLAN_PACKET_SIZE.try_into().expect("Internal number conversion failed for VLAN packet size"),
         false => ETHERNET_STD_PACKET_SIZE.try_into().expect("Internal number conversion failed for Ethernet packet size")
     };
-    let retry_count: u128 = options.retry_count.try_into().unwrap();
+    let retry_count: u128 = options.retry_count.try_into().unwrap_or_else(|err| {
+        eprintln!("[warn] Could not cast retry count, defaults to 1 - {}", err);
+        1
+    });
 
     // The values below are averages based on an amount of performed network
     // scans. This may of course vary based on network configurations.
