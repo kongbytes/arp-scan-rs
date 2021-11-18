@@ -230,7 +230,7 @@ impl ScanOptions {
     fn compute_networks(file_value: Option<&str>, network_value: Option<&str>) -> Result<Option<Vec<IpNetwork>>, String> {
 
         let required_networks: Option<Vec<String>> = ScanOptions::list_required_networks(file_value, network_value)?;
-        if let None = required_networks {
+        if required_networks.is_none() {
             return Ok(None);
         }
 

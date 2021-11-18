@@ -209,7 +209,7 @@ The features below will be shipped in the next releases of the project.
 - Adding advanced packet options (padding, LLC, ...)
 - ~~Enable bandwith control (exclusive with interval)~~ - released in 0.12.0
 - Stronger profile defaults (chaos & stealth)
-- Avoid packet copy in userspace for daster scans (BPF filtering)
+- Avoid packet copy in userspace for faster scans (BPF filtering)
 
 ## Contributing
 
