@@ -14,7 +14,7 @@ categories = ["command-line-utilities"]
 [dependencies]
 
 # CLI & utilities
-clap = "2.33"
+clap = { version = "2.33", default-features = false, features = [ "suggestions", "color"] }
 ansi_term = "0.12"
 rand = "0.8"
 ctrlc = "3.2"
