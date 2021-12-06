@@ -240,27 +240,96 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
     tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
 }
 
-/**
- * Compute the whole IP range that must be scanned. This includes every IP
- * address contained in the ip_networks argument. Based on the scan options,
- * this list may be randomized to enhance scans.
- */
-pub fn compute_ip_range(ip_networks: &[&IpNetwork], scan_options: &Arc<ScanOptions>) -> Vec<IpAddr> {
+pub struct NetworkIterator {
+    current_iterator: Option<ipnetwork::IpNetworkIterator>,
+    networks: Vec<IpNetwork>,
+    is_random: bool,
+    random_pool: Vec<IpAddr>
+}
 
-    ip_networks.iter().fold(vec![], |accumulator, ip_network| {
+impl NetworkIterator {
 
-        let ip_addresses = match scan_options.randomize_targets {
-            true => {
-                let mut rng = rand::thread_rng();
-                let mut shuffled_addresses: Vec<IpAddr> = ip_network.iter().collect();
-                shuffled_addresses.shuffle(&mut rng);
-                shuffled_addresses
-            },
-            false => ip_network.iter().collect()
+    pub fn new(networks_ref: &[&IpNetwork], is_random: bool) -> NetworkIterator {
+
+        // The IpNetwork struct implements the Clone trait, which means that a simple
+        // dereference will clone the struct in the new vector
+        let mut networks: Vec<IpNetwork> = networks_ref.iter().map(|network| *(*network)).collect();
+
+        if is_random {
+            let mut rng = rand::thread_rng();
+            networks.shuffle(&mut rng);
+        }
+
+        NetworkIterator {
+            current_iterator: None,
+            networks,
+            is_random,
+            random_pool: vec![]
+        }
+    }
+
+    fn has_no_items_left(&self) -> bool {
+        self.current_iterator.is_none() && self.networks.is_empty() && self.random_pool.is_empty()
+    }
+
+    fn fill_random_pool(&mut self) {
+
+        for _ in 0..1000 {
+
+            let next_ip = self.current_iterator.as_mut().unwrap().next();
+            if next_ip.is_none() {
+                break;
+            }
+
+            self.random_pool.push(next_ip.unwrap());
+        }
+
+        let mut rng = rand::thread_rng();
+        self.random_pool.shuffle(&mut rng);
+    }
+
+    fn select_new_iterator(&mut self) {
+
+        self.current_iterator = Some(self.networks.remove(0).iter());
+    }
+
+    fn pop_next_iterator_address(&mut self) -> Option<IpAddr> {
+
+        self.current_iterator.as_mut().map(|iterator| iterator.next()).unwrap_or(None)
+    }
+
+}
+
+impl Iterator for NetworkIterator {
+
+    type Item = IpAddr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+
+        if self.has_no_items_left() {
+            return None;
+        }
+
+        if self.current_iterator.is_none() && !self.networks.is_empty() {
+            self.select_new_iterator();
+        }
+
+        if self.is_random && self.random_pool.is_empty() {
+            self.fill_random_pool();
+        }
+
+        let next_ip = match self.is_random {
+            true => self.random_pool.pop(),
+            false => self.pop_next_iterator_address()
         };
 
-        [accumulator, ip_addresses].concat()
-    })
+        if next_ip.is_none() && !self.networks.is_empty() {
+            self.select_new_iterator();
+            return self.pop_next_iterator_address();
+        }
+
+        next_ip
+    }
 }
 
 /**
@@ -406,12 +475,21 @@ mod tests {
 
     use super::*;
 
+    use ipnetwork::Ipv4Network;
+    use std::env;
+
     #[test]
     fn should_resolve_public_ip() {
 
-        let ipv4 = Ipv4Addr::new(1,1,1,1);
-
-        assert_eq!(find_hostname(ipv4), Some("one.one.one.one".to_string()));
+        // Sometimes, we do not have access to public networks in the test
+        // environment and can pass the OFFLINE environment variable.
+        if env::var("OFFLINE").is_ok() {
+            assert_eq!(true, true);
+        }
+        else {
+            let ipv4 = Ipv4Addr::new(1,1,1,1);
+            assert_eq!(find_hostname(ipv4), Some("one.one.one.one".to_string()));
+        }
     }
 
     #[test]
@@ -428,6 +506,89 @@ mod tests {
         let ipv4 = Ipv4Addr::new(10,254,254,254);
 
         assert_eq!(find_hostname(ipv4), None);
+    }
+
+    #[test]
+    fn should_iterate_over_empty_networks() {
+
+        let mut iterator = NetworkIterator::new(&vec![], false);
+
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn should_iterate_over_single_address() {
+
+        let network_a = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 1), 32).unwrap()
+        );
+        let target_network: Vec<&IpNetwork> = vec![
+            &network_a
+        ];
+
+        let mut iterator = NetworkIterator::new(&target_network, false);
+
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))));
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn should_iterate_over_multiple_address() {
+
+        let network_a = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 1), 24).unwrap()
+        );
+        let target_network: Vec<&IpNetwork> = vec![
+            &network_a
+        ];
+
+        let mut iterator = NetworkIterator::new(&target_network, false);
+
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 0))));
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))));
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2))));
+    }
+
+    #[test]
+    fn should_iterate_over_multiple_networks() {
+
+        let network_a = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 1), 32).unwrap()
+        );
+        let network_b = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(10, 10, 20, 20), 32).unwrap()
+        );
+        let target_network: Vec<&IpNetwork> = vec![
+            &network_a,
+            &network_b
+        ];
+
+        let mut iterator = NetworkIterator::new(&target_network, false);
+
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1))));
+        assert_eq!(iterator.next(), Some(IpAddr::V4(Ipv4Addr::new(10, 10, 20, 20))));
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn should_iterate_with_random() {
+
+        let network_a = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(192, 168, 1, 1), 32).unwrap()
+        );
+        let network_b = IpNetwork::V4(
+            Ipv4Network::new(Ipv4Addr::new(10, 10, 20, 20), 32).unwrap()
+        );
+        let target_network: Vec<&IpNetwork> = vec![
+            &network_a,
+            &network_b
+        ];
+
+        let mut iterator = NetworkIterator::new(&target_network, true);
+
+        assert_eq!(iterator.next().is_some(), true);
+        assert_eq!(iterator.next().is_some(), true);
+        assert_eq!(iterator.next(), None);
     }
 
 }
