@@ -1,3 +1,4 @@
+use std::env;
 use std::process;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use crate::args::ScanOptions;
  * user. This approach only supports Linux-like systems (Ubuntu, Fedore, ...).
  */
 pub fn is_root_user() -> bool {
-    std::env::var("USER").unwrap_or_else(|_| String::from("")) == *"root"
+    env::var("USER").unwrap_or_else(|_| String::from("")) == *"root"
 }
 
 /**

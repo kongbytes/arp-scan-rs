@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use pnet::datalink;
 
 use crate::args::{ScanOptions, OutputFormat};
+use crate::network::NetworkIterator;
 use crate::vendor::Vendor;
 
 fn main() {
@@ -117,11 +118,7 @@ fn main() {
             break;
         }
 
-        // The random approach has one major drawback, compared with the native
-        // network iterator exposed by 'ipnetwork': memory usage. Instead of
-        // using a small memory footprint iterator, we have to store all IP
-        // addresses in memory at once. This can cause problems on large ranges.
-        let ip_addresses: Vec<IpAddr> = network::compute_ip_range(&ip_networks, &scan_options);
+        let ip_addresses = NetworkIterator::new(&ip_networks, scan_options.randomize_targets);
         let source_ip = network::find_source_ip(selected_interface, scan_options.source_ipv4);
 
         for ip_address in ip_addresses {
@@ -143,8 +140,8 @@ fn main() {
     let mut sleep_ms_mount: u64 = 0;
     while !finish_sleep.load(Ordering::Relaxed) && sleep_ms_mount < scan_options.timeout_ms {
         
-        thread::sleep(Duration::from_millis(500));
-        sleep_ms_mount += 500;
+        thread::sleep(Duration::from_millis(100));
+        sleep_ms_mount += 100;
     }
     timed_out.store(true, Ordering::Relaxed);
 
