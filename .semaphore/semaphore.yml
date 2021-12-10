@@ -16,6 +16,7 @@ blocks:
           commands:
             - checkout
             - rustup update stable
+            - export PATH="$PATH:$HOME/.cargo/bin"
             - rustc --version
             - cargo build --verbose
             - cargo test --verbose
