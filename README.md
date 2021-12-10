@@ -66,6 +66,12 @@ Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the 
 wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.12.0/arp-scan-v0.12.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
+Optionnaly, fetch the IEEE OUI reference file (CSV format) that contains all MAC address vendors.
+
+```bash
+wget -O /usr/share/arp-scan/ieee-oui.csv http://standards-oui.ieee.org/oui/oui.csv
+```
+
 List all available network interfaces.
 
 ```bash
