@@ -14,7 +14,8 @@ blocks:
       jobs:
         - name: Cargo test
           commands:
-            - rustup update
             - checkout
+            - rustup update stable
+            - rustc --version
             - cargo build --verbose
             - cargo test --verbose
