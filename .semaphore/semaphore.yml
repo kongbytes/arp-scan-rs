@@ -5,9 +5,9 @@ agent:
     type: e1-standard-2
     os_image: ubuntu2004
   containers:
-    # Rust 1.56 (2021 edition) is currently not supported
+    # Rust 1.56 (2021 edition) is currently not supported in Semaphore
     - name: main
-      image: 'registry.semaphoreci.com/rust:1.51'
+      image: 'saluki/rust-ci:1.57'
 blocks:
   - name: Test release
     task:
@@ -15,8 +15,6 @@ blocks:
         - name: Cargo test
           commands:
             - checkout
-            - rustup update stable
-            - export PATH="$PATH:$HOME/.cargo/bin"
             - rustc --version
             - cargo build --verbose
             - cargo test --verbose
