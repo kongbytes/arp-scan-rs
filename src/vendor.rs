@@ -61,10 +61,10 @@ impl Vendor {
                         eprintln!("Could not read CSV record ({})", err);
                         process::exit(1);
                     });
-                    let potential_oui = record.get(1).unwrap_or(&"");
+                    let potential_oui = record.get(1).unwrap_or("");
             
                     if vendor_oui.eq(potential_oui) {
-                        return Some(record.get(2).unwrap_or(&"(no vendor)").to_string())
+                        return Some(record.get(2).unwrap_or("(no vendor)").to_string())
                     }
                 }
 
