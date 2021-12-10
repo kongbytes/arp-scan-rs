@@ -74,7 +74,7 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
         Some(name) => String::from(name),
         None => {
 
-            let name = utils::select_default_interface(&interfaces).map(|interface| interface.name);
+            let name = utils::select_default_interface(interfaces).map(|interface| interface.name);
 
             match name {
                 Some(name) => name,
@@ -237,9 +237,14 @@ pub fn send_arp_request(tx: &mut Box<dyn DataLinkSender>, interface: &NetworkInt
         ethernet_packet.set_payload(arp_packet.packet_mut());
     }
 
-    tx.send_to(&ethernet_packet.to_immutable().packet(), Some(interface.clone()));
+    tx.send_to(ethernet_packet.to_immutable().packet(), Some(interface.clone()));
 }
 
+/**
+ * A network iterator for iterating over multiple network ranges in with a
+ * low-memory approach. This iterator was crafted to allow iteration over huge
+ * network ranges (192.168.0.0/16) without consuming excessive memory.
+ */
 pub struct NetworkIterator {
     current_iterator: Option<ipnetwork::IpNetworkIterator>,
     networks: Vec<IpNetwork>,
@@ -267,6 +272,11 @@ impl NetworkIterator {
             random_pool: vec![]
         }
     }
+
+    /**
+     * The functions below are not public and only used by the Iterator trait
+     * to help keep the next() code clean.
+     */
 
     fn has_no_items_left(&self) -> bool {
         self.current_iterator.is_none() && self.networks.is_empty() && self.random_pool.is_empty()
@@ -391,7 +401,7 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
         };
         packet_count += 1;
         
-        let ethernet_packet = match EthernetPacket::new(&arp_buffer[..]) {
+        let ethernet_packet = match EthernetPacket::new(arp_buffer) {
             Some(packet) => packet,
             None => continue
         };

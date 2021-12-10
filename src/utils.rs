@@ -158,13 +158,13 @@ pub fn display_scan_results(response_summary: ResponseSummary, mut target_detail
     for detail in target_details.iter() {
 
         let hostname: &str = match &detail.hostname {
-            Some(hostname) => &hostname,
-            None if !options.resolve_hostname => &"(disabled)",
-            None => &""
+            Some(hostname) => hostname,
+            None if !options.resolve_hostname => "(disabled)",
+            None => ""
         };
         let vendor: &str = match &detail.vendor {
-            Some(vendor) => &vendor,
-            None => &""
+            Some(vendor) => vendor,
+            None => ""
         };
         println!("| {: <15} | {: <18} | {: <h_max$} | {: <v_max$} |", detail.ipv4, detail.mac, hostname, vendor, h_max=hostname_len, v_max=vendor_len);
     }
