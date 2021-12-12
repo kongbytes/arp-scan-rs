@@ -12,9 +12,11 @@ blocks:
   - name: Test release
     task:
       jobs:
-        - name: Cargo test
+        - name: Build
           commands:
             - checkout
             - rustc --version
             - cargo build --verbose
+        - name: Test
+          commands:
             - cargo test --verbose
