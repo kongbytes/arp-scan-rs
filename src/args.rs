@@ -23,13 +23,16 @@ const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const EXAMPLES_HELP: &str = "EXAMPLES:
 
-    List network interfaces
+    # Launch a default scan with on the first working interface
+    arp- scann
+
+    # List network interfaces
     arp-scan -l
 
-    Launch a scan on WiFi interface with fake IP and stealth profile
+    # Launch a scan on WiFi interface with fake IP and stealth profile
     arp-scan -i wlp1s0 --source-ip 192.168.0.42 --profile stealth
 
-    Launch a scan on VLAN 45 with JSON output
+    # Launch a scan on VLAN 45 with JSON output
     arp-scan -Q 45 -o json
 
 ";

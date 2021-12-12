@@ -201,6 +201,7 @@ The features below will be shipped in the next releases of the project.
 
 - Make ARP scans faster
     - with a per-host retry approach
+    - add a back-off factor for retries
     - ~~by closing the response thread faster~~  - released in 0.8.0
 - ~~Scan profiles (standard, attacker, light, ...)~~ - released in 0.10.0
 - Complete VLAN support
@@ -213,8 +214,13 @@ The features below will be shipped in the next releases of the project.
 - ~~Partial results on SIGINT~~ - released in 0.11.0
 - ~~Read network targets from file~~ - released in 0.12.0
 - Adding advanced packet options (padding, LLC, ...)
+    - add padding bits after ARP payload
+    - support RFC 1042 LLC framing with SNAP
 - ~~Enable bandwith control (exclusive with interval)~~ - released in 0.12.0
 - Stronger profile defaults (chaos & stealth)
+- Other platforms (Windows, ...)
+- Read targets from *stdout*
+- Change verbose options (for debug, network details, quiet mode, ...)
 - Avoid packet copy in userspace for faster scans (BPF filtering)
 
 ## Contributing
