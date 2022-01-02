@@ -24,7 +24,7 @@ const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 const EXAMPLES_HELP: &str = "EXAMPLES:
 
     # Launch a default scan with on the first working interface
-    arp- scann
+    arp-scan
 
     # List network interfaces
     arp-scan -l
@@ -41,120 +41,120 @@ const EXAMPLES_HELP: &str = "EXAMPLES:
  * This function groups together all exposed CLI arguments to the end-users
  * with clap. Other CLI details (version, ...) should be grouped there as well.
  */
-pub fn build_args<'a, 'b>() -> App<'a, 'b> {
+pub fn build_args<'a>() -> App<'a> {
 
     App::new("arp-scan")
         .version(CLI_VERSION)
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
-            Arg::with_name("profile").short("p").long("profile")
+            Arg::new("profile").short('p').long("profile")
                 .takes_value(true).value_name("PROFILE_NAME")
                 .help("Scan profile")
         )
         .arg(
-            Arg::with_name("interface").short("i").long("interface")
+            Arg::new("interface").short('i').long("interface")
                 .takes_value(true).value_name("INTERFACE_NAME")
                 .help("Network interface")
         )
         .arg(
-            Arg::with_name("network").short("n").long("network")
+            Arg::new("network").short('n').long("network")
                 .takes_value(true).value_name("NETWORK_RANGE")
                 .help("Network range to scan")
         )
         .arg(
-            Arg::with_name("file").short("f").long("file")
+            Arg::new("file").short('f').long("file")
                 .takes_value(true).value_name("FILE_PATH")
                 .conflicts_with("network")
                 .help("Read IPv4 addresses from a file")
         )
         .arg(
-            Arg::with_name("timeout").short("t").long("timeout")
+            Arg::new("timeout").short('t').long("timeout")
                 .takes_value(true).value_name("TIMEOUT_DURATION")
                 .help("ARP response timeout")
         )
         .arg(
-            Arg::with_name("source_ip").short("S").long("source-ip")
+            Arg::new("source_ip").short('S').long("source-ip")
                 .takes_value(true).value_name("SOURCE_IPV4")
                 .help("Source IPv4 address for requests")
         )
         .arg(
-            Arg::with_name("destination_mac").short("M").long("dest-mac")
+            Arg::new("destination_mac").short('M').long("dest-mac")
                 .takes_value(true).value_name("DESTINATION_MAC")
                 .help("Destination MAC address for requests")
         )
         .arg(
-            Arg::with_name("source_mac").long("source-mac")
+            Arg::new("source_mac").long("source-mac")
                 .takes_value(true).value_name("SOURCE_MAC")
                 .help("Source MAC address for requests")
         )
         .arg(
-            Arg::with_name("numeric").long("numeric")
+            Arg::new("numeric").long("numeric")
                 .takes_value(false)
                 .help("Numeric mode, no hostname resolution")
         )
         .arg(
-            Arg::with_name("vlan").short("Q").long("vlan")
+            Arg::new("vlan").short('Q').long("vlan")
                 .takes_value(true).value_name("VLAN_ID")
                 .help("Send using 802.1Q with VLAN ID")
         )
         .arg(
-            Arg::with_name("retry_count").short("r").long("retry")
+            Arg::new("retry_count").short('r').long("retry")
                 .takes_value(true).value_name("RETRY_COUNT")
                 .help("Host retry attempt count")
         )
         .arg(
-            Arg::with_name("random").short("R").long("random")
+            Arg::new("random").short('R').long("random")
                 .takes_value(false)
                 .help("Randomize the target list")
         )
         .arg(
-            Arg::with_name("interval").short("I").long("interval")
+            Arg::new("interval").short('I').long("interval")
                 .takes_value(true).value_name("INTERVAL_DURATION")
                 .help("Milliseconds between ARP requests")
         )
         .arg(
-            Arg::with_name("bandwidth").short("B").long("bandwidth")
+            Arg::new("bandwidth").short('B').long("bandwidth")
                 .takes_value(true).value_name("BITS")
                 .conflicts_with("interval")
                 .help("Limit scan bandwidth (bits/second)")
         )
         .arg(
-            Arg::with_name("oui-file").long("oui-file")
+            Arg::new("oui-file").long("oui-file")
                 .takes_value(true).value_name("FILE_PATH")
                 .help("Path to custom IEEE OUI CSV file")
         )
         .arg(
-            Arg::with_name("list").short("l").long("list")
+            Arg::new("list").short('l').long("list")
                 .takes_value(false)
                 .help("List network interfaces")
         )
         .arg(
-            Arg::with_name("output").short("o").long("output")
+            Arg::new("output").short('o').long("output")
                 .takes_value(true).value_name("FORMAT")
                 .help("Define output format")
         )
         .arg(
-            Arg::with_name("hw_type").long("hw-type")
+            Arg::new("hw_type").long("hw-type")
                 .takes_value(true).value_name("HW_TYPE")
                 .help("Custom ARP hardware field")
         )
         .arg(
-            Arg::with_name("hw_addr").long("hw-addr")
+            Arg::new("hw_addr").long("hw-addr")
                 .takes_value(true).value_name("ADDRESS_LEN")
                 .help("Custom ARP hardware address length")
         )
         .arg(
-            Arg::with_name("proto_type").long("proto-type")
+            Arg::new("proto_type").long("proto-type")
                 .takes_value(true).value_name("PROTO_TYPE")
                 .help("Custom ARP proto type")
         )
         .arg(
-            Arg::with_name("proto_addr").long("proto-addr")
+            Arg::new("proto_addr").long("proto-addr")
                 .takes_value(true).value_name("ADDRESS_LEN")
                 .help("Custom ARP proto address length")
         )
         .arg(
-            Arg::with_name("arp_operation").long("arp-op")
+            Arg::new("arp_operation").long("arp-op")
                 .takes_value(true).value_name("OPERATION_ID")
                 .help("Custom ARP operation ID")
         )
@@ -425,7 +425,7 @@ impl ScanOptions {
             None => "/usr/share/arp-scan/ieee-oui.csv".to_string()
         };
 
-        let hw_type = match matches.value_of("hw-type") {
+        let hw_type = match matches.value_of("hw_type") {
             Some(hw_type_text) => {
     
                 match hw_type_text.parse::<u16>() {
@@ -439,7 +439,7 @@ impl ScanOptions {
             None => None
         };
         
-        let hw_addr = match matches.value_of("hw-addr") {
+        let hw_addr = match matches.value_of("hw_addr") {
             Some(hw_addr_text) => {
     
                 match hw_addr_text.parse::<u8>() {
@@ -453,7 +453,7 @@ impl ScanOptions {
             None => None
         };
         
-        let proto_type = match matches.value_of("proto-type") {
+        let proto_type = match matches.value_of("proto_type") {
             Some(proto_type_text) => {
     
                 match proto_type_text.parse::<u16>() {
@@ -467,7 +467,7 @@ impl ScanOptions {
             None => None
         };
         
-        let proto_addr = match matches.value_of("proto-addr") {
+        let proto_addr = match matches.value_of("proto_addr") {
             Some(proto_addr_text) => {
     
                 match proto_addr_text.parse::<u8>() {
@@ -481,7 +481,7 @@ impl ScanOptions {
             None => None
         };
 
-        let arp_operation = match matches.value_of("arp-op") {
+        let arp_operation = match matches.value_of("arp_operation") {
             Some(arp_op_text) => {
     
                 match arp_op_text.parse::<u16>() {
