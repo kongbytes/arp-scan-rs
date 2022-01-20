@@ -21,7 +21,7 @@ rand = "0.8"
 ctrlc = "3.2"
 
 # Network
-pnet = "0.28"
+pnet = "0.29"
 ipnetwork = "0.18"
 dns-lookup = "1.0"
 
