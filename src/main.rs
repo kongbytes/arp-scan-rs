@@ -99,31 +99,32 @@ fn main() {
         println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, interval_ms);
     }
 
-    let finish_sleep = Arc::new(AtomicBool::new(false));
-    let cloned_finish_sleep = Arc::clone(&finish_sleep);
+    let has_reached_timeout = Arc::new(AtomicBool::new(false));
+    let cloned_reached_timeout = Arc::clone(&has_reached_timeout);
 
     ctrlc::set_handler(move || {
         eprintln!("[warn] Receiving halt signal, ending scan with partial results");
-        cloned_finish_sleep.store(true, Ordering::Relaxed);
+        cloned_reached_timeout.store(true, Ordering::Relaxed);
     }).unwrap_or_else(|err| {
         eprintln!("Could not set CTRL+C handler ({})", err);
         process::exit(1);
     });
 
+    let source_ip = network::find_source_ip(selected_interface, scan_options.source_ipv4);
+
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
     for _ in 0..scan_options.retry_count {
 
-        if finish_sleep.load(Ordering::Relaxed) {
+        if has_reached_timeout.load(Ordering::Relaxed) {
             break;
         }
 
         let ip_addresses = NetworkIterator::new(&ip_networks, scan_options.randomize_targets);
-        let source_ip = network::find_source_ip(selected_interface, scan_options.source_ipv4);
 
         for ip_address in ip_addresses {
 
-            if finish_sleep.load(Ordering::Relaxed) {
+            if has_reached_timeout.load(Ordering::Relaxed) {
                 break;
             }
 
@@ -138,7 +139,7 @@ fn main() {
     // (where T is the timeout option). After the sleep phase, the response
     // thread will receive a stop request through the 'timed_out' mutex.
     let mut sleep_ms_mount: u64 = 0;
-    while !finish_sleep.load(Ordering::Relaxed) && sleep_ms_mount < scan_options.timeout_ms {
+    while !has_reached_timeout.load(Ordering::Relaxed) && sleep_ms_mount < scan_options.timeout_ms {
         
         thread::sleep(Duration::from_millis(100));
         sleep_ms_mount += 100;
