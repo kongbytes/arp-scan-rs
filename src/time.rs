@@ -45,6 +45,10 @@ pub fn parse_to_milliseconds(time_arg: &str) -> Result<u64, &str> {
     }
 }
 
+/**
+ * Format milliseconds to a human-readable string. This will of course give an
+ * approximation, but will be readable.
+ */
 pub fn format_milliseconds(milliseconds: u128) -> String {
 
     if milliseconds < 1000 {

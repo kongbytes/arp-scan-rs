@@ -109,6 +109,10 @@ pub fn display_prescan_details(ip_networks: &[&IpNetwork], selected_interface: &
     }
 }
 
+/**
+ * Computes multiple IPv4 networks total size, IPv6 network are not being
+ * supported by this function. 
+ */
 pub fn compute_network_size(ip_networks: &[&IpNetwork]) -> u128 {
 
     ip_networks.iter().fold(0u128, |total_size, ip_network| {
@@ -209,6 +213,10 @@ struct SerializableGlobalResult {
     results: Vec<SerializableResultItem>
 }
 
+/**
+ * Transforms an ARP scan result (including KPI and target details) to a structure
+ * that can be serialized for export (JSON, YAML, CSV, ...)
+ */
 fn get_serializable_result(response_summary: ResponseSummary, target_details: Vec<TargetDetails>) -> SerializableGlobalResult {
 
     let exportable_results: Vec<SerializableResultItem> = target_details.into_iter()
