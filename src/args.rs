@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::path::Path;
 use std::fs;
 
-use clap::{Arg, ArgMatches, App};
+use clap::{Arg, ArgMatches, Command};
 use ipnetwork::IpNetwork;
 use pnet::datalink::MacAddr;
 use pnet::packet::arp::{ArpHardwareType, ArpOperation};
@@ -41,9 +41,9 @@ const EXAMPLES_HELP: &str = "EXAMPLES:
  * This function groups together all exposed CLI arguments to the end-users
  * with clap. Other CLI details (version, ...) should be grouped there as well.
  */
-pub fn build_args<'a>() -> App<'a> {
+pub fn build_args<'a>() -> Command<'a> {
 
-    App::new("arp-scan")
+    Command::new("arp-scan")
         .version(CLI_VERSION)
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
