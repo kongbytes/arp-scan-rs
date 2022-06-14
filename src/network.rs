@@ -9,7 +9,7 @@ use std::convert::TryInto;
 
 use dns_lookup::lookup_addr;
 use ipnetwork::IpNetwork;
-use pnet::datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver};
+use pnet_datalink::{MacAddr, NetworkInterface, DataLinkSender, DataLinkReceiver};
 use pnet::packet::{MutablePacket, Packet};
 use pnet::packet::ethernet::{EthernetPacket, MutableEthernetPacket, EtherTypes};
 use pnet::packet::arp::{MutableArpPacket, ArpOperations, ArpHardwareTypes, ArpPacket};
