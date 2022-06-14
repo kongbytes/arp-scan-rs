@@ -22,13 +22,13 @@ cp -p ./target/x86_64-unknown-linux-gnu/release/arp-scan ./builds/arp-scan-v$CLI
 # Build the deb archive
 mkdir -p ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN
 echo "Package: arp-scan-rs" > ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
-echo "Version: 0.13.0" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
-echo "Architecture: all" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
+echo "Version: $CLI_VERSION" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
+echo "Architecture: amd64" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
 echo "Maintainer: Saluki" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
 echo "Description: Minimalist ARP scan written in Rust" >> ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/DEBIAN/control
 mkdir -p ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/usr/local/bin
-cp ./builds/arp-scan-v$CLI_VERSION-x86_64-unknown-linux-glibc ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/usr/local/bin/arp-scan
-(cd ./builds && dpkg-deb --build --root-owner-group arp-scan-rs_0.13.0-1_amd64)
+cp ./builds/arp-scan-v$CLI_VERSION-x86_64-unknown-linux-musl ./builds/arp-scan-rs_$CLI_VERSION-1_amd64/usr/local/bin/arp-scan
+(cd ./builds && dpkg-deb --build --root-owner-group arp-scan-rs_$CLI_VERSION-1_amd64)
 
 echo "Update the README instructions for v$CLI_VERSION"
 echo " ✓ Publish on crates.io"
