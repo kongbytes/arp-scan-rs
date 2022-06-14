@@ -64,7 +64,7 @@ ARP scan finished, 5 hosts found in 1.623 seconds
 Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.13.0/arp-scan-v0.13.0-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.13.1/arp-scan-v0.13.1-x86_64-unknown-linux-musl && chmod +x ./arp-scan
 ```
 
 Optionnaly, fetch the IEEE OUI reference file (CSV format) that contains all MAC address vendors.
