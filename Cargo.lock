@@ -22,7 +22,7 @@ dependencies = [
 
 [[package]]
 name = "arp-scan"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "ansi_term",
  "clap",
