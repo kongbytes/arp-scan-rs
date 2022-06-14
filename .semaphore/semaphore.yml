@@ -7,7 +7,7 @@ agent:
   containers:
     # Rust 1.56 (2021 edition) is currently not supported in Semaphore
     - name: main
-      image: 'saluki/rust-ci:1.57'
+      image: 'saluki/rust-ci:1.61'
 blocks:
   - name: Test release
     task:
