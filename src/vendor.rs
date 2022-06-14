@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::process;
 
-use pnet::datalink::MacAddr;
+use pnet_datalink::MacAddr;
 use csv::{Position, Reader};
 
 // The Vendor structure performs search operations on a vendor database to find

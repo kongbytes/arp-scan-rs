@@ -2,7 +2,7 @@ use std::env;
 use std::process;
 use std::sync::Arc;
 
-use pnet::datalink::NetworkInterface;
+use pnet_datalink::NetworkInterface;
 use ipnetwork::{IpNetwork, NetworkSize};
 use serde::Serialize;
 use ansi_term::Color::{Green, Red};

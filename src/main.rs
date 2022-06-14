@@ -11,8 +11,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use pnet::datalink;
-
 use crate::args::{ScanOptions, OutputFormat};
 use crate::network::NetworkIterator;
 use crate::vendor::Vendor;
@@ -27,9 +25,9 @@ fn main() {
     // flag has been given in the request. Note that this can be done without
     // using a root account (this will be verified later).
 
-    let interfaces = datalink::interfaces();
+    let interfaces = pnet_datalink::interfaces();
 
-    if matches.is_present("list") {
+    if matches.contains_id("list") {
         utils::show_interfaces(&interfaces);
         process::exit(0);
     }
@@ -59,13 +57,13 @@ fn main() {
     // while the main thread sends a batch of ARP requests for each IP in the
     // local network.
 
-    let channel_config = datalink::Config {
+    let channel_config = pnet_datalink::Config {
         read_timeout: Some(Duration::from_millis(network::DATALINK_RCV_TIMEOUT)), 
-        ..datalink::Config::default()
+        ..pnet_datalink::Config::default()
     };
 
-    let (mut tx, mut rx) = match datalink::channel(selected_interface, channel_config) {
-        Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
+    let (mut tx, mut rx) = match pnet_datalink::channel(selected_interface, channel_config) {
+        Ok(pnet_datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
         Ok(_) => {
             eprintln!("Expected an Ethernet datalink channel");
             process::exit(1);

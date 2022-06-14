@@ -7,7 +7,7 @@ use std::fs;
 
 use clap::{Arg, ArgMatches, Command};
 use ipnetwork::IpNetwork;
-use pnet::datalink::MacAddr;
+use pnet_datalink::MacAddr;
 use pnet::packet::arp::{ArpHardwareType, ArpOperation};
 use pnet::packet::ethernet::EtherType;
 
@@ -204,7 +204,7 @@ pub struct ScanOptions {
 
 impl ScanOptions {
 
-    fn list_required_networks(file_value: Option<&str>, network_value: Option<&str>) -> Result<Option<Vec<String>>, String> {
+    fn list_required_networks(file_value: Option<&String>, network_value: Option<&String>) -> Result<Option<Vec<String>>, String> {
 
         let network_options = (file_value, network_value);
         match network_options {
@@ -230,7 +230,7 @@ impl ScanOptions {
      * arguments or files. This method will fail of a failure has been detected
      * (either on the IO level or the network syntax parsing)
      */
-    fn compute_networks(file_value: Option<&str>, network_value: Option<&str>) -> Result<Option<Vec<IpNetwork>>, String> {
+    fn compute_networks(file_value: Option<&String>, network_value: Option<&String>) -> Result<Option<Vec<IpNetwork>>, String> {
 
         let required_networks: Option<Vec<String>> = ScanOptions::list_required_networks(file_value, network_value)?;
         if required_networks.is_none() {
@@ -260,7 +260,7 @@ impl ScanOptions {
      */
     fn compute_scan_timing(matches: &ArgMatches, profile: &ProfileType) -> ScanTiming {
 
-        match (matches.value_of("bandwidth"), matches.value_of("interval")) {
+        match (matches.get_one::<String>("bandwidth"), matches.get_one::<String>("interval")) {
             (Some(bandwidth_text), None) => {
                 let bits_second: u64 = bandwidth_text.parse().unwrap_or_else(|err| {
                     eprintln!("Expected positive number, {}", err);
@@ -287,10 +287,10 @@ impl ScanOptions {
      */
     pub fn new(matches: &ArgMatches) -> Arc<Self> {
 
-        let profile = match matches.value_of("profile") {
+        let profile = match matches.get_one::<String>("profile") {
             Some(output_request) => {
 
-                match output_request {
+                match output_request.as_ref() {
                     "default" | "d" => ProfileType::Default,
                     "fast" | "f" => ProfileType::Fast,
                     "stealth" | "s" => ProfileType::Stealth,
@@ -304,15 +304,18 @@ impl ScanOptions {
             None => ProfileType::Default
         };
 
-        let interface_name = matches.value_of("interface").map(String::from);
+        let interface_name = matches.get_one::<String>("interface").cloned();
 
-        let network_range = ScanOptions::compute_networks(matches.value_of("file"), matches.value_of("network")).unwrap_or_else(|err| {
+        let file_option = matches.get_one::<String>("file");
+        let network_option = matches.get_one::<String>("network");
+
+        let network_range = ScanOptions::compute_networks(file_option, network_option).unwrap_or_else(|err| {
             eprintln!("Could not compute requested network range to scan");
             eprintln!("{}", err);
             process::exit(1);
         });
 
-        let timeout_ms: u64 = match matches.value_of("timeout") {
+        let timeout_ms: u64 = match matches.get_one::<String>("timeout") {
             Some(timeout_text) => parse_to_milliseconds(timeout_text).unwrap_or_else(|err| {
                 eprintln!("Expected correct timeout, {}", err);
                 process::exit(1);
@@ -324,9 +327,9 @@ impl ScanOptions {
         };
 
         // Hostnames will not be resolved in numeric mode or stealth profile
-        let resolve_hostname = !matches.is_present("numeric") && !matches!(profile, ProfileType::Stealth);
+        let resolve_hostname = !matches.contains_id("numeric") && !matches!(profile, ProfileType::Stealth);
 
-        let source_ipv4: Option<Ipv4Addr> = match matches.value_of("source_ip") {
+        let source_ipv4: Option<Ipv4Addr> = match matches.get_one::<String>("source_ip") {
             Some(source_ip) => {
                 
                 match source_ip.parse::<Ipv4Addr>() {
@@ -340,7 +343,7 @@ impl ScanOptions {
             None => None
         };
 
-        let destination_mac: Option<MacAddr> = match matches.value_of("destination_mac") {
+        let destination_mac: Option<MacAddr> = match matches.get_one::<String>("destination_mac") {
             Some(mac_address) => {
                 
                 match mac_address.parse::<MacAddr>() {
@@ -354,7 +357,7 @@ impl ScanOptions {
             None => None
         };
 
-        let source_mac: Option<MacAddr> = match matches.value_of("source_mac") {
+        let source_mac: Option<MacAddr> = match matches.get_one::<String>("source_mac") {
             Some(mac_address) => {
                 
                 match mac_address.parse::<MacAddr>() {
@@ -368,7 +371,7 @@ impl ScanOptions {
             None => None
         };
     
-        let vlan_id: Option<u16> = match matches.value_of("vlan") {
+        let vlan_id: Option<u16> = match matches.get_one::<String>("vlan") {
             Some(vlan) => {
     
                 match vlan.parse::<u16>() {
@@ -382,7 +385,7 @@ impl ScanOptions {
             None => None
         };
 
-        let retry_count = match matches.value_of("retry_count") {
+        let retry_count = match matches.get_one::<String>("retry_count") {
             Some(retry_count) => {
     
                 match retry_count.parse::<usize>() {
@@ -401,10 +404,10 @@ impl ScanOptions {
 
         let scan_timing: ScanTiming = ScanOptions::compute_scan_timing(matches, &profile);
 
-        let output = match matches.value_of("output") {
+        let output = match matches.get_one::<String>("output") {
             Some(output_request) => {
 
-                match output_request {
+                match output_request.as_ref() {
                     "json" => OutputFormat::Json,
                     "yaml" => OutputFormat::Yaml,
                     "plain" | "text" => OutputFormat::Plain,
@@ -418,14 +421,14 @@ impl ScanOptions {
             None => OutputFormat::Plain
         };
 
-        let randomize_targets = matches.is_present("random") || matches!(profile, ProfileType::Stealth | ProfileType::Chaos);
+        let randomize_targets = matches.contains_id("random") || matches!(profile, ProfileType::Stealth | ProfileType::Chaos);
 
-        let oui_file: String = match matches.value_of("oui-file") {
+        let oui_file: String = match matches.get_one::<String>("oui-file") {
             Some(file) => file.to_string(),
             None => "/usr/share/arp-scan/ieee-oui.csv".to_string()
         };
 
-        let hw_type = match matches.value_of("hw_type") {
+        let hw_type = match matches.get_one::<String>("hw_type") {
             Some(hw_type_text) => {
     
                 match hw_type_text.parse::<u16>() {
@@ -439,7 +442,7 @@ impl ScanOptions {
             None => None
         };
         
-        let hw_addr = match matches.value_of("hw_addr") {
+        let hw_addr = match matches.get_one::<String>("hw_addr") {
             Some(hw_addr_text) => {
     
                 match hw_addr_text.parse::<u8>() {
@@ -453,7 +456,7 @@ impl ScanOptions {
             None => None
         };
         
-        let proto_type = match matches.value_of("proto_type") {
+        let proto_type = match matches.get_one::<String>("proto_type") {
             Some(proto_type_text) => {
     
                 match proto_type_text.parse::<u16>() {
@@ -467,7 +470,7 @@ impl ScanOptions {
             None => None
         };
         
-        let proto_addr = match matches.value_of("proto_addr") {
+        let proto_addr = match matches.get_one::<String>("proto_addr") {
             Some(proto_addr_text) => {
     
                 match proto_addr_text.parse::<u8>() {
@@ -481,7 +484,7 @@ impl ScanOptions {
             None => None
         };
 
-        let arp_operation = match matches.value_of("arp_operation") {
+        let arp_operation = match matches.get_one::<String>("arp_operation") {
             Some(arp_op_text) => {
     
                 match arp_op_text.parse::<u16>() {
@@ -547,7 +550,7 @@ mod tests {
     #[test]
     fn should_handle_single_ipv4_arg() {
         
-        let networks = ScanOptions::compute_networks(None, Some("192.168.1.20"));
+        let networks = ScanOptions::compute_networks(None, Some(&"192.168.1.20".to_string()));
 
         let target_network: Vec<IpNetwork> = vec![
             IpNetwork::V4(
@@ -561,7 +564,7 @@ mod tests {
     #[test]
     fn should_handle_multiple_ipv4_arg() {
         
-        let networks = ScanOptions::compute_networks(None, Some("192.168.1.20,192.168.1.50"));
+        let networks = ScanOptions::compute_networks(None, Some(&"192.168.1.20,192.168.1.50".to_string()));
 
         let target_network: Vec<IpNetwork> = vec![
             IpNetwork::V4(
@@ -578,7 +581,7 @@ mod tests {
     #[test]
     fn should_handle_single_network_arg() {
         
-        let networks = ScanOptions::compute_networks(None, Some("192.168.1.0/24"));
+        let networks = ScanOptions::compute_networks(None, Some(&"192.168.1.0/24".to_string()));
 
         let target_network: Vec<IpNetwork> = vec![
             IpNetwork::V4(
@@ -592,7 +595,7 @@ mod tests {
     #[test]
     fn should_handle_network_mix_arg() {
         
-        let networks = ScanOptions::compute_networks(None, Some("192.168.20.1,192.168.1.0/24,192.168.5.4/28"));
+        let networks = ScanOptions::compute_networks(None, Some(&"192.168.20.1,192.168.1.0/24,192.168.5.4/28".to_string()));
 
         let target_network: Vec<IpNetwork> = vec![
             IpNetwork::V4(
@@ -612,7 +615,7 @@ mod tests {
     #[test]
     fn should_handle_file_input() {
         
-        let networks = ScanOptions::compute_networks(Some("./data/ip-list.txt"), None);
+        let networks = ScanOptions::compute_networks(Some(&"./data/ip-list.txt".to_string()), None);
 
         let target_network: Vec<IpNetwork> = vec![
             IpNetwork::V4(
@@ -632,7 +635,7 @@ mod tests {
     #[test]
     fn should_fail_incorrect_network() {
         
-        let networks = ScanOptions::compute_networks(None, Some("500.10.10.10/24"));
+        let networks = ScanOptions::compute_networks(None, Some(&"500.10.10.10/24".to_string()));
 
         assert_eq!(networks, Err("Expected valid IPv4 network range (invalid address: 500.10.10.10/24)".to_string()));
     }
@@ -640,7 +643,7 @@ mod tests {
     #[test]
     fn should_fail_unreadable_network() {
         
-        let networks = ScanOptions::compute_networks(None, Some("no-network"));
+        let networks = ScanOptions::compute_networks(None, Some(&"no-network".to_string()));
 
         assert_eq!(networks, Err("Expected valid IPv4 network range (invalid address: no-network)".to_string()));
     }
