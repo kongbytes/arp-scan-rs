@@ -29,8 +29,11 @@ const EXAMPLES_HELP: &str = "EXAMPLES:
     # List network interfaces
     arp-scan -l
 
+    # Launch a scan on a specific range
+    arp-scan -i eth0 -n 10.37.3.1,10.37.4.55/24
+
     # Launch a scan on WiFi interface with fake IP and stealth profile
-    arp-scan -i wlp1s0 --source-ip 192.168.0.42 --profile stealth
+    arp-scan -i eth0 --source-ip 192.168.0.42 --profile stealth
 
     # Launch a scan on VLAN 45 with JSON output
     arp-scan -Q 45 -o json
@@ -158,6 +161,11 @@ pub fn build_args<'a>() -> Command<'a> {
                 .takes_value(true).value_name("OPERATION_ID")
                 .help("Custom ARP operation ID")
         )
+        .arg(
+            Arg::new("packet_help").long("packet-help")
+                .takes_value(false)
+                .help("Print details about an ARP packet")
+        )
         .after_help(EXAMPLES_HELP)
 }
 
@@ -199,7 +207,8 @@ pub struct ScanOptions {
     pub hw_addr: Option<u8>,
     pub proto_type: Option<EtherType>,
     pub proto_addr: Option<u8>,
-    pub arp_operation: Option<ArpOperation>
+    pub arp_operation: Option<ArpOperation>,
+    pub packet_help: bool
 }
 
 impl ScanOptions {
@@ -497,6 +506,8 @@ impl ScanOptions {
             },
             None => None
         };
+
+        let packet_help = matches.contains_id("packet_help");
     
         Arc::new(ScanOptions {
             profile,
@@ -517,7 +528,8 @@ impl ScanOptions {
             hw_addr,
             proto_type,
             proto_addr,
-            arp_operation
+            arp_operation,
+            packet_help
         })
     }
 
@@ -529,6 +541,10 @@ impl ScanOptions {
     pub fn has_vlan(&self) -> bool {
 
         matches!(&self.vlan_id, Some(_)) 
+    }
+
+    pub fn request_protocol_print(&self) -> bool {
+        self.packet_help
     }
 
 }

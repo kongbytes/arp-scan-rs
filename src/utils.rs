@@ -60,6 +60,31 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
     println!();
 }
 
+pub fn print_ascii_packet() {
+
+    println!();
+    println!(" 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 ");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+    println!("|         Hardware type         |        Protocol type          |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|");
+    println!("|         Hlen  | Plen          |          Operation            |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+    println!("|                          Sender HA                            |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+    println!("|             Sender HA         |      Sender IP                |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|");
+    println!("|             Sender IP         |      Target HA                |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|");
+    println!("|                          Target HA                            |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+    println!("|                          Target IP                            |");
+    println!("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+    println!();
+    println!(" - Hardware type (2 bytes), use --hw-type option to change");
+    println!(" - Protocol type (2 bytes), use --proto-type option to change");
+    println!();
+}
+
 /**
  * Find a default network interface for scans, based on the operating system
  * priority and some interface technical details.

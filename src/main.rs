@@ -39,6 +39,11 @@ fn main() {
     // with an IPv4 address and root permissions (for crafting ARP packets).
 
     let scan_options = ScanOptions::new(&matches);
+
+    if scan_options.request_protocol_print() {
+        utils::print_ascii_packet();
+        process::exit(0);
+    }
     
     if !utils::is_root_user() {
         eprintln!("Should run this binary as root or use --help for options");
