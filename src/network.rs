@@ -95,11 +95,9 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
             process::exit(1);
         });
 
-    let ip_networks: Vec<&IpNetwork> = match &scan_options.network_range {
+    let ip_networks: Vec<&ipnetwork::IpNetwork> = match &scan_options.network_range {
         Some(network_range) => network_range.iter().collect(),
-        None => selected_interface.ips.iter()
-            .filter(|ip_network| ip_network.is_ipv4())
-            .collect()
+        None => selected_interface.ips.iter().filter(|ip_network| ip_network.is_ipv4()).collect()
     };
 
     (selected_interface, ip_networks)
