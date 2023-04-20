@@ -27,7 +27,7 @@ fn main() {
 
     let interfaces = pnet_datalink::interfaces();
 
-    if matches.contains_id("list") {
+    if matches.get_flag("list") {
         utils::show_interfaces(&interfaces);
         process::exit(0);
     }

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::path::Path;
 use std::fs;
 
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use ipnetwork::IpNetwork;
 use pnet_datalink::MacAddr;
 use pnet::packet::arp::{ArpHardwareType, ArpOperation};
@@ -44,126 +44,128 @@ const EXAMPLES_HELP: &str = "EXAMPLES:
  * This function groups together all exposed CLI arguments to the end-users
  * with clap. Other CLI details (version, ...) should be grouped there as well.
  */
-pub fn build_args<'a>() -> Command<'a> {
+pub fn build_args() -> Command {
 
     Command::new("arp-scan")
         .version(CLI_VERSION)
         .about("A minimalistic ARP scan tool written in Rust")
         .arg(
             Arg::new("profile").short('p').long("profile")
-                .takes_value(true).value_name("PROFILE_NAME")
+                .value_name("PROFILE_NAME")
                 .help("Scan profile")
         )
         .arg(
             Arg::new("interface").short('i').long("interface")
-                .takes_value(true).value_name("INTERFACE_NAME")
+                .value_name("INTERFACE_NAME")
                 .help("Network interface")
         )
         .arg(
             Arg::new("network").short('n').long("network")
-                .takes_value(true).value_name("NETWORK_RANGE")
+                .value_name("NETWORK_RANGE")
                 .help("Network range to scan")
         )
         .arg(
             Arg::new("file").short('f').long("file")
-                .takes_value(true).value_name("FILE_PATH")
+                .value_name("FILE_PATH")
                 .conflicts_with("network")
                 .help("Read IPv4 addresses from a file")
         )
         .arg(
             Arg::new("timeout").short('t').long("timeout")
-                .takes_value(true).value_name("TIMEOUT_DURATION")
+                .value_name("TIMEOUT_DURATION")
                 .help("ARP response timeout")
         )
         .arg(
             Arg::new("source_ip").short('S').long("source-ip")
-                .takes_value(true).value_name("SOURCE_IPV4")
+                .value_name("SOURCE_IPV4")
                 .help("Source IPv4 address for requests")
         )
         .arg(
             Arg::new("destination_mac").short('M').long("dest-mac")
-                .takes_value(true).value_name("DESTINATION_MAC")
+                .value_name("DESTINATION_MAC")
                 .help("Destination MAC address for requests")
         )
         .arg(
             Arg::new("source_mac").long("source-mac")
-                .takes_value(true).value_name("SOURCE_MAC")
+                .value_name("SOURCE_MAC")
                 .help("Source MAC address for requests")
         )
         .arg(
             Arg::new("numeric").long("numeric")
-                .takes_value(false)
+                .action(ArgAction::SetTrue)
                 .help("Numeric mode, no hostname resolution")
         )
         .arg(
             Arg::new("vlan").short('Q').long("vlan")
-                .takes_value(true).value_name("VLAN_ID")
+                .value_name("VLAN_ID")
                 .help("Send using 802.1Q with VLAN ID")
         )
         .arg(
             Arg::new("retry_count").short('r').long("retry")
-                .takes_value(true).value_name("RETRY_COUNT")
+                .value_name("RETRY_COUNT")
                 .help("Host retry attempt count")
         )
         .arg(
             Arg::new("random").short('R').long("random")
-                .takes_value(false)
+                .action(ArgAction::SetTrue)
                 .help("Randomize the target list")
         )
         .arg(
             Arg::new("interval").short('I').long("interval")
-                .takes_value(true).value_name("INTERVAL_DURATION")
+                .value_name("INTERVAL_DURATION")
                 .help("Milliseconds between ARP requests")
         )
         .arg(
             Arg::new("bandwidth").short('B').long("bandwidth")
-                .takes_value(true).value_name("BITS")
+                .value_name("BITS")
                 .conflicts_with("interval")
                 .help("Limit scan bandwidth (bits/second)")
         )
         .arg(
             Arg::new("oui-file").long("oui-file")
-                .takes_value(true).value_name("FILE_PATH")
+                .value_name("FILE_PATH")
                 .help("Path to custom IEEE OUI CSV file")
         )
         .arg(
             Arg::new("list").short('l').long("list")
-                .takes_value(false)
+                .action(ArgAction::SetTrue)
+                .exclusive(true)
                 .help("List network interfaces")
         )
         .arg(
             Arg::new("output").short('o').long("output")
-                .takes_value(true).value_name("FORMAT")
+                .value_name("FORMAT")
                 .help("Define output format")
         )
         .arg(
             Arg::new("hw_type").long("hw-type")
-                .takes_value(true).value_name("HW_TYPE")
+                .value_name("HW_TYPE")
                 .help("Custom ARP hardware field")
         )
         .arg(
             Arg::new("hw_addr").long("hw-addr")
-                .takes_value(true).value_name("ADDRESS_LEN")
+                .value_name("ADDRESS_LEN")
                 .help("Custom ARP hardware address length")
         )
         .arg(
             Arg::new("proto_type").long("proto-type")
-                .takes_value(true).value_name("PROTO_TYPE")
+                .value_name("PROTO_TYPE")
                 .help("Custom ARP proto type")
         )
         .arg(
             Arg::new("proto_addr").long("proto-addr")
-                .takes_value(true).value_name("ADDRESS_LEN")
+                .value_name("ADDRESS_LEN")
                 .help("Custom ARP proto address length")
         )
         .arg(
             Arg::new("arp_operation").long("arp-op")
-                .takes_value(true).value_name("OPERATION_ID")
+                .value_name("OPERATION_ID")
                 .help("Custom ARP operation ID")
         )
         .arg(
             Arg::new("packet_help").long("packet-help")
-                .takes_value(false)
+                .action(ArgAction::SetTrue)
+                .exclusive(true)
                 .help("Print details about an ARP packet")
         )
         .after_help(EXAMPLES_HELP)
@@ -208,7 +210,7 @@ pub struct ScanOptions {
     pub proto_type: Option<EtherType>,
     pub proto_addr: Option<u8>,
     pub arp_operation: Option<ArpOperation>,
-    pub packet_help: bool
+    pub packet_help: bool,
 }
 
 impl ScanOptions {
@@ -336,7 +338,7 @@ impl ScanOptions {
         };
 
         // Hostnames will not be resolved in numeric mode or stealth profile
-        let resolve_hostname = !matches.contains_id("numeric") && !matches!(profile, ProfileType::Stealth);
+        let resolve_hostname = !matches.get_flag("numeric") && !matches!(profile, ProfileType::Stealth);
 
         let source_ipv4: Option<Ipv4Addr> = match matches.get_one::<String>("source_ip") {
             Some(source_ip) => {
@@ -430,7 +432,7 @@ impl ScanOptions {
             None => OutputFormat::Plain
         };
 
-        let randomize_targets = matches.contains_id("random") || matches!(profile, ProfileType::Stealth | ProfileType::Chaos);
+        let randomize_targets = matches.get_flag("random") || matches!(profile, ProfileType::Stealth | ProfileType::Chaos);
 
         let oui_file: String = match matches.get_one::<String>("oui-file") {
             Some(file) => file.to_string(),
@@ -507,7 +509,7 @@ impl ScanOptions {
             None => None
         };
 
-        let packet_help = matches.contains_id("packet_help");
+        let packet_help = matches.get_flag("packet_help");
     
         Arc::new(ScanOptions {
             profile,
@@ -529,7 +531,7 @@ impl ScanOptions {
             proto_type,
             proto_addr,
             arp_operation,
-            packet_help
+            packet_help,
         })
     }
 
