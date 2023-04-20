@@ -66,7 +66,7 @@ pub fn format_milliseconds(milliseconds: u128) -> String {
     }
 
     let hours: u128 = milliseconds / 1000 / 60 / 60;
-    return format!("{}h", hours);
+    format!("{}h", hours)
 }
 
 #[cfg(test)]

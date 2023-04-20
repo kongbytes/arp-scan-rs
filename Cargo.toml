@@ -11,19 +11,20 @@ repository = "https://github.com/Saluki/arp-scan-rs"
 keywords = ["arp", "scan", "network", "security"]
 categories = ["command-line-utilities"]
 exclude = ["/.semaphore", "/data", "/release.sh", ".*"]
+rust-version = "1.64"
 
 [dependencies]
 
 # CLI & utilities
-clap = { version = "3.2", default-features = false, features = ["std", "suggestions", "color"] }
+clap = { version = "4.2", default-features = false, features = ["std", "suggestions", "color", "help"] }
 ansi_term = "0.12"
 rand = "0.8"
 ctrlc = "3.2"
 
 # Network
-pnet = "0.31"
-pnet_datalink = "0.31"
-ipnetwork = "0.19"
+pnet = "0.33"
+pnet_datalink = "0.33"
+ipnetwork = "0.20"
 dns-lookup = "1.0"
 
 # Parsing & exports

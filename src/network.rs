@@ -136,7 +136,7 @@ pub fn compute_scan_estimation(host_count: u128, options: &Arc<ScanOptions>) -> 
         ScanTiming::Bandwidth(bandwidth) => {
 
             let bandwidth_lg: u128 = bandwidth.into();
-            let request_phase_ms: u128 = (request_size * 1000) as u128 / bandwidth_lg;
+            let request_phase_ms: u128 = (request_size * 1000) / bandwidth_lg;
             let interval_ms: u128 = (request_phase_ms/retry_count/host_count) - avg_arp_request_ms;
             
             (interval_ms.try_into().unwrap(), bandwidth_lg, request_phase_ms)
@@ -432,7 +432,7 @@ pub fn receive_arp_responses(rx: &mut Box<dyn DataLinkReceiver>, options: Arc<Sc
 
     // For each target found, enhance each item with additional results
     // results such as the hostname & MAC vendor.
-    let target_details = discover_map.into_iter().map(|(_, mut target_detail)| {
+    let target_details = discover_map.into_values().map(|mut target_detail| {
 
         if options.resolve_hostname {
             target_detail.hostname = find_hostname(target_detail.ipv4);
