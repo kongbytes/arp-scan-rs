@@ -16,6 +16,11 @@ use crate::network::NetworkIterator;
 use crate::vendor::Vendor;
 
 fn main() {
+    // Upgrade user privileges when needed
+    // ----------------------------------------
+    // Providing a prompt for the user when
+    // the app is run and user is not root    
+    sudo::escalate_if_needed().expect("You need root permissions to run this app. Unable to escalate to sudo");
     
     let matches = args::build_args().get_matches();
 
