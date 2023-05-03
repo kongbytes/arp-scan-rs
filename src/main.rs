@@ -50,11 +50,6 @@ fn main() {
         process::exit(0);
     }
     
-    if !utils::is_root_user() {
-        eprintln!("Should run this binary as root or use --help for options");
-        process::exit(1);
-    }
-
     let (selected_interface, ip_networks) = network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
