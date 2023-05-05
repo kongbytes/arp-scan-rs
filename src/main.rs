@@ -16,7 +16,6 @@ use crate::network::NetworkIterator;
 use crate::vendor::Vendor;
 
 fn main() {
-    
     let matches = args::build_args().get_matches();
 
     // Find interfaces & list them if requested
@@ -45,11 +44,16 @@ fn main() {
         process::exit(0);
     }
     
-    if !utils::is_root_user() {
-        eprintln!("Should run this binary as root or use --help for options");
-        process::exit(1);
-    }
-
+    // Upgrade user privileges when needed
+    // ----------------------------------------
+    // Providing a prompt for the user when
+    // the app is run and user is not root    
+    sudo::escalate_if_needed().expect("You need root permissions to run this app. Unable to escalate to sudo");
+    
+    // Get network configuration
+    // -------------------------
+    // See args.rs and in particular the struct ScanOptions
+    // for a full list of options
     let (selected_interface, ip_networks) = network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
@@ -61,7 +65,6 @@ fn main() {
     // ARP responses on the interface will be collected in a separate thread,
     // while the main thread sends a batch of ARP requests for each IP in the
     // local network.
-
     let channel_config = pnet_datalink::Config {
         read_timeout: Some(Duration::from_millis(network::DATALINK_RCV_TIMEOUT)), 
         ..pnet_datalink::Config::default()

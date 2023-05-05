@@ -1,4 +1,3 @@
-use std::env;
 use std::process;
 use std::sync::Arc;
 
@@ -9,14 +8,6 @@ use ansi_term::Color::{Green, Red};
 
 use crate::network::{ResponseSummary, TargetDetails};
 use crate::args::ScanOptions;
-
-/**
- * Based on the current UNIX environment, find if the process is run as root
- * user. This approach only supports Linux-like systems (Ubuntu, Fedore, ...).
- */
-pub fn is_root_user() -> bool {
-    env::var("USER").unwrap_or_else(|_| String::from("")) == *"root"
-}
 
 /**
  * Prints on stdout a list of all available network interfaces with some
