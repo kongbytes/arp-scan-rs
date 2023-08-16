@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::path::Path;
 use std::fs;
 
+use clap::builder::PossibleValue;
 use clap::{Arg, ArgMatches, Command, ArgAction};
 use ipnetwork::IpNetwork;
 use pnet_datalink::MacAddr;
@@ -52,17 +53,23 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("profile").short('p').long("profile")
                 .value_name("PROFILE_NAME")
-                .help("Scan profile")
+                .value_parser([
+                    PossibleValue::new("default").help("Default scan profile"),
+                    PossibleValue::new("fast").help("Fast ARP scans (less accurate)"),
+                    PossibleValue::new("stealth").help("Slower scans (minimize impact)"),
+                    PossibleValue::new("chaos").help("Randomly-selected values")
+                ])
+                .help("Scan profile - a preset of ARP scan options")
         )
         .arg(
             Arg::new("interface").short('i').long("interface")
                 .value_name("INTERFACE_NAME")
-                .help("Network interface")
+                .help("Network interface (defaults to first 'up' interface with IPv4)")
         )
         .arg(
             Arg::new("network").short('n').long("network")
                 .value_name("NETWORK_RANGE")
-                .help("Network range to scan")
+                .help("Network range to scan (defaults to first IPv4 network on the interface)")
         )
         .arg(
             Arg::new("file").short('f').long("file")
@@ -73,12 +80,12 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("timeout").short('t').long("timeout")
                 .value_name("TIMEOUT_DURATION")
-                .help("ARP response timeout")
+                .help("ARP response timeout (2000ms)")
         )
         .arg(
             Arg::new("source_ip").short('S').long("source-ip")
                 .value_name("SOURCE_IPV4")
-                .help("Source IPv4 address for requests")
+                .help("Source IPv4 address (defaults to IPv4 address on the interface)")
         )
         .arg(
             Arg::new("destination_mac").short('M').long("dest-mac")
@@ -88,7 +95,7 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("source_mac").long("source-mac")
                 .value_name("SOURCE_MAC")
-                .help("Source MAC address for requests")
+                .help("Source MAC address for requests (default to 00:00:00:00:00:00)")
         )
         .arg(
             Arg::new("numeric").long("numeric")
@@ -103,7 +110,7 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("retry_count").short('r').long("retry")
                 .value_name("RETRY_COUNT")
-                .help("Host retry attempt count")
+                .help("Host retry attempt count (default to 1)")
         )
         .arg(
             Arg::new("random").short('R').long("random")
@@ -113,7 +120,7 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("interval").short('I').long("interval")
                 .value_name("INTERVAL_DURATION")
-                .help("Milliseconds between ARP requests")
+                .help("Milliseconds between ARP requests (defaults to 10ms)")
         )
         .arg(
             Arg::new("bandwidth").short('B').long("bandwidth")
@@ -124,17 +131,24 @@ pub fn build_args() -> Command {
         .arg(
             Arg::new("oui-file").long("oui-file")
                 .value_name("FILE_PATH")
-                .help("Path to custom IEEE OUI CSV file")
+                .default_value("/usr/share/arp-scan/ieee-oui.csv")
+                .help("Path to custom IEEE OUI CSV file for vendor lookup")
         )
         .arg(
             Arg::new("list").short('l').long("list")
                 .action(ArgAction::SetTrue)
                 .exclusive(true)
-                .help("List network interfaces")
+                .help("List network interfaces and exit")
         )
         .arg(
             Arg::new("output").short('o').long("output")
                 .value_name("FORMAT")
+                .value_parser([
+                    PossibleValue::new("plain").help("Verbose output with table"),
+                    PossibleValue::new("json").help("JSON format"),
+                    PossibleValue::new("yaml").help("YAML format"),
+                    PossibleValue::new("csv").help("CSV format")
+                ])
                 .help("Define output format")
         )
         .arg(
@@ -166,7 +180,7 @@ pub fn build_args() -> Command {
             Arg::new("packet_help").long("packet-help")
                 .action(ArgAction::SetTrue)
                 .exclusive(true)
-                .help("Print details about an ARP packet")
+                .help("Print details about an ARP packet and exit")
         )
         .after_help(EXAMPLES_HELP)
 }
