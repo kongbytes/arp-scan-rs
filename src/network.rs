@@ -103,7 +103,6 @@ fn find_interface_by_name<'a>(interfaces: &'a [NetworkInterface], interface_name
 }
 
 fn find_interface_by_index<'a>(interfaces: &'a [NetworkInterface], interface_index: u32) -> Option<&'a NetworkInterface> {
-    println!("interface = 15 {}", interface_index == 15);
     interfaces.iter()
         .find(|interface| interface.index == interface_index && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
 }
