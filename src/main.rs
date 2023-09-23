@@ -45,7 +45,7 @@ fn main() {
         process::exit(0);
     }
     
-    if !utils::is_root_user() {
+    if !cfg!(windows) && !utils::is_root_user() {
         eprintln!("Should run this binary as root or use --help for options");
         process::exit(1);
     }
