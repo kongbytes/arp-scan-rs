@@ -224,12 +224,15 @@ The features below will be shipped in the next releases of the project.
 - Change verbose options (for debug, network details, quiet mode, ...)
 - Avoid packet copy in userspace for faster scans (BPF filtering)
 
-## Building
-#### Linux / Mac
-Simply run `cargo build`
+## Building the project
+
+#### Linux and Mac
+
+Run the `cargo build` command.
 
 #### Windows
-See [github.com/libpnet/libpnet#windows](https://github.com/libpnet/libpnet#windows)
+
+See [github.com/libpnet/libpnet#windows](https://github.com/libpnet/libpnet#windows).
 In additional for what they described there, 
 for linking `Packet.lib` you can just place it in the root of this project.
 

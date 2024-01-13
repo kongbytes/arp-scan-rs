@@ -17,8 +17,8 @@ use pnet::packet::vlan::{ClassOfService, MutableVlanPacket};
 use rand::prelude::*;
 
 use crate::args::ScanOptions;
-use crate::vendor::Vendor;
 use crate::utils;
+use crate::vendor::Vendor;
 use crate::args::ScanTiming;
 
 pub const DATALINK_RCV_TIMEOUT: u64 = 500;
@@ -69,18 +69,25 @@ pub struct TargetDetails {
  * specific network on a network interfaces.
  */
 pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], scan_options: &'a Arc<ScanOptions>) -> (&'a NetworkInterface, Vec<&'a IpNetwork>) {
-    let selected_interface = match (&scan_options.interface_name, &scan_options.interface_index) {
+    
+    let mut interface_name = scan_options.interface_name.clone();
+    if scan_options.interface_name.is_none() && scan_options.interface_index.is_none() {
+        let default_name = utils::select_default_interface(interfaces).map(|interface| interface.name);
+        interface_name = default_name;
+    }
+
+    let selected_interface = match (interface_name, &scan_options.interface_index) {
         (Some(interface_name), _) => {
-            find_interface_by_name(interfaces, interface_name)
+            find_interface_by_name(interfaces, &interface_name)
         },
         (None, Some(interface_index)) => {
             find_interface_by_index(interfaces, *interface_index)
         },
         _ => {
-                    eprintln!("Could not find a default network interface");
-                    eprintln!("Use 'arp scan -l' to list available interfaces");
-                    process::exit(1);
-                }
+            eprintln!("Could not find a default network interface");
+            eprintln!("Use 'arp scan -l' to list available interfaces");
+            process::exit(1);
+        }
     };
 
     let selected_interface = selected_interface.unwrap_or_else(|| {
@@ -97,12 +104,12 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
     (selected_interface, ip_networks)
 }
 
-fn find_interface_by_name<'a>(interfaces: &'a [NetworkInterface], interface_name: &str) -> Option<&'a NetworkInterface> {
+fn find_interface_by_name<'a>(interfaces: &'a [NetworkInterface], interface_name: &String) -> Option<&'a NetworkInterface> {
     interfaces.iter()
-        .find(|interface| interface.name == interface_name && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
+        .find(|interface| &interface.name == interface_name && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
 }
 
-fn find_interface_by_index<'a>(interfaces: &'a [NetworkInterface], interface_index: u32) -> Option<&'a NetworkInterface> {
+fn find_interface_by_index(interfaces: &[NetworkInterface], interface_index: u32) -> Option<&NetworkInterface> {
     interfaces.iter()
         .find(|interface| interface.index == interface_index && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
 }

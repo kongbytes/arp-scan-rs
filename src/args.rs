@@ -565,8 +565,7 @@ impl ScanOptions {
     }
 
     pub fn has_vlan(&self) -> bool {
-
-        matches!(&self.vlan_id, Some(_)) 
+        self.vlan_id.is_some()
     }
 
     pub fn request_protocol_print(&self) -> bool {
