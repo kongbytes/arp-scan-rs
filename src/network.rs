@@ -69,29 +69,23 @@ pub struct TargetDetails {
  * specific network on a network interfaces.
  */
 pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], scan_options: &'a Arc<ScanOptions>) -> (&'a NetworkInterface, Vec<&'a IpNetwork>) {
-
-    let interface_name = match &scan_options.interface_name {
-        Some(name) => String::from(name),
-        None => {
-
-            let name = utils::select_default_interface(interfaces).map(|interface| interface.name);
-
-            match name {
-                Some(name) => name,
-                None => {
+    let selected_interface = match (&scan_options.interface_name, &scan_options.interface_index) {
+        (Some(interface_name), _) => {
+            find_interface_by_name(interfaces, interface_name)
+        },
+        (None, Some(interface_index)) => {
+            find_interface_by_index(interfaces, *interface_index)
+        },
+        _ => {
                     eprintln!("Could not find a default network interface");
                     eprintln!("Use 'arp scan -l' to list available interfaces");
                     process::exit(1);
                 }
-            }
-        }
     };
 
-    let selected_interface: &NetworkInterface = interfaces.iter()
-        .find(|interface| { interface.name == interface_name && interface.is_up() && !interface.is_loopback() })
-        .unwrap_or_else(|| {
-            eprintln!("Could not find interface with name {}", interface_name);
-            eprintln!("Make sure the interface is up, not loopback and has a valid IPv4");
+    let selected_interface = selected_interface.unwrap_or_else(|| {
+        eprintln!("Could not find the specified interface");
+        eprintln!("Make sure the interface is up, not loopback, and has a valid IPv4");
             process::exit(1);
         });
 
@@ -102,6 +96,17 @@ pub fn compute_network_configuration<'a>(interfaces: &'a [NetworkInterface], sca
 
     (selected_interface, ip_networks)
 }
+
+fn find_interface_by_name<'a>(interfaces: &'a [NetworkInterface], interface_name: &str) -> Option<&'a NetworkInterface> {
+    interfaces.iter()
+        .find(|interface| interface.name == interface_name && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
+}
+
+fn find_interface_by_index<'a>(interfaces: &'a [NetworkInterface], interface_index: u32) -> Option<&'a NetworkInterface> {
+    interfaces.iter()
+        .find(|interface| interface.index == interface_index && (cfg!(windows) || interface.is_up()) && !interface.is_loopback())
+}
+
 
 /**
  * Based on the network size and given scan options, this function performs an

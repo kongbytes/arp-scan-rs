@@ -30,7 +30,6 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
 
     println!();
     for interface in interfaces.iter() {
-
         let up_text = match interface.is_up() {
             true => format!("{} UP", Green.paint("✔")),
             false => format!("{} DOWN", Red.paint("✖"))
@@ -44,7 +43,8 @@ pub fn show_interfaces(interfaces: &[NetworkInterface]) {
             None => "".to_string()
         };
 
-        println!("{: <20} {: <18} {: <20} {}", interface.name, up_text, mac_text, first_ip);
+        let index_text = format!("{} ", interface.index);
+        println!("{: <3} {: <20} {: <18} {: <20} {}", index_text ,interface.name, up_text, mac_text, first_ip);
 
         interface_count += 1;
         if interface.is_up() && !interface.is_loopback() && !interface.ips.is_empty() {

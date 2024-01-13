@@ -224,6 +224,16 @@ The features below will be shipped in the next releases of the project.
 - Change verbose options (for debug, network details, quiet mode, ...)
 - Avoid packet copy in userspace for faster scans (BPF filtering)
 
+## Building
+#### Linux / Mac
+Simply run `cargo build`
+
+#### Windows
+See [github.com/libpnet/libpnet#windows](https://github.com/libpnet/libpnet#windows)
+In additional for what they described there, 
+for linking `Packet.lib` you can just place it in the root of this project.
+
+
 ## Contributing
 
 Feel free to suggest an improvement, report a bug, or ask something: https://github.com/saluki/arp-scan-rs/issues

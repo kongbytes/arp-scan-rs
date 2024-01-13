@@ -62,9 +62,14 @@ pub fn build_args() -> Command {
                 .help("Scan profile - a preset of ARP scan options")
         )
         .arg(
+            Arg::new("index").long("index")
+                .value_name("INTERFACE_INDEX")
+                .help("Network interface index (defaults to first 'up' interface with IPv4)")
+        )
+        .arg(
             Arg::new("interface").short('i').long("interface")
                 .value_name("INTERFACE_NAME")
-                .help("Network interface (defaults to first 'up' interface with IPv4)")
+                .help("Network interface name (defaults to first 'up' interface with IPv4)")
         )
         .arg(
             Arg::new("network").short('n').long("network")
@@ -207,6 +212,7 @@ pub enum ScanTiming {
 pub struct ScanOptions {
     pub profile: ProfileType,
     pub interface_name: Option<String>,
+    pub interface_index: Option<u32>,
     pub network_range: Option<Vec<ipnetwork::IpNetwork>>,
     pub timeout_ms: u64,
     pub resolve_hostname: bool,
@@ -330,6 +336,9 @@ impl ScanOptions {
         };
 
         let interface_name = matches.get_one::<String>("interface").cloned();
+        let interface_index_str = matches.get_one::<String>("index").cloned();
+        let interface_index = interface_index_str.unwrap_or_default().parse::<u32>().ok();
+
 
         let file_option = matches.get_one::<String>("file");
         let network_option = matches.get_one::<String>("network");
@@ -528,6 +537,7 @@ impl ScanOptions {
         Arc::new(ScanOptions {
             profile,
             interface_name,
+            interface_index,
             network_range,
             timeout_ms,
             resolve_hostname,
