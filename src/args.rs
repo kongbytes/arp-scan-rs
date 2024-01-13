@@ -23,7 +23,7 @@ const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const EXAMPLES_HELP: &str = "EXAMPLES:
 
-    # Launch a default scan with on the first working interface
+    # Launch a default scan on the first working interface
     arp-scan
 
     # List network interfaces
@@ -32,7 +32,7 @@ const EXAMPLES_HELP: &str = "EXAMPLES:
     # Launch a scan on a specific range
     arp-scan -i eth0 -n 10.37.3.1,10.37.4.55/24
 
-    # Launch a scan on WiFi interface with fake IP and stealth profile
+    # Launch a scan on a specific interface with a custom IP and stealth profile
     arp-scan -i eth0 --source-ip 192.168.0.42 --profile stealth
 
     # Launch a scan on VLAN 45 with JSON output
