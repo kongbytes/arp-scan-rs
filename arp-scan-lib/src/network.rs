@@ -16,8 +16,7 @@ use pnet::packet::{MutablePacket, Packet};
 use pnet_datalink::{DataLinkReceiver, DataLinkSender, MacAddr, NetworkInterface};
 use rand::prelude::*;
 
-use crate::args::ScanOptions;
-use crate::args::ScanTiming;
+use crate::scan_options::{ScanOptions, ScanTiming};
 use crate::utils;
 use crate::vendor::Vendor;
 

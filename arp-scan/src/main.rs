@@ -1,8 +1,5 @@
 mod args;
-mod network;
-mod time;
-mod utils;
-mod vendor;
+mod cli_utils;
 
 use std::net::IpAddr;
 use std::process;
@@ -11,9 +8,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use crate::args::{OutputFormat, ScanOptions};
-use crate::network::NetworkIterator;
-use crate::vendor::Vendor;
+use crate::args::build_scan_options_from_args;
+use crate::cli_utils::{
+    display_scan_results, export_to_csv, export_to_json, export_to_yaml, has_network_capability,
+    print_ascii_packet, show_interfaces,
+};
+use arp_scan_lib::{
+    network, network::NetworkIterator, scan_options::OutputFormat, time, utils, vendor::Vendor,
+};
 
 fn main() {
     let matches = args::build_args().get_matches();
@@ -27,7 +29,7 @@ fn main() {
     let interfaces = pnet_datalink::interfaces();
 
     if matches.get_flag("list") {
-        utils::show_interfaces(&interfaces);
+        show_interfaces(&interfaces);
         process::exit(0);
     }
 
@@ -37,14 +39,14 @@ fn main() {
     // network for the given interface. ARP scans require an active interface
     // with an IPv4 address and root permissions (for crafting ARP packets).
 
-    let scan_options = ScanOptions::new(&matches);
+    let scan_options = build_scan_options_from_args(&matches);
 
     if scan_options.request_protocol_print() {
-        utils::print_ascii_packet();
+        print_ascii_packet();
         process::exit(0);
     }
 
-    if !utils::has_network_capability() {
+    if !has_network_capability() {
         eprintln!(
             "Should run this binary as root, an user with CAP_NET_RAW capabilities or use --help for options"
         );
@@ -169,16 +171,10 @@ fn main() {
 
     match &scan_options.output {
         OutputFormat::Plain => {
-            utils::display_scan_results(response_summary, target_details, &scan_options)
+            display_scan_results(response_summary, target_details, &scan_options)
         }
-        OutputFormat::Json => println!(
-            "{}",
-            utils::export_to_json(response_summary, target_details)
-        ),
-        OutputFormat::Yaml => println!(
-            "{}",
-            utils::export_to_yaml(response_summary, target_details)
-        ),
-        OutputFormat::Csv => print!("{}", utils::export_to_csv(response_summary, target_details)),
+        OutputFormat::Json => println!("{}", export_to_json(response_summary, target_details)),
+        OutputFormat::Yaml => println!("{}", export_to_yaml(response_summary, target_details)),
+        OutputFormat::Csv => print!("{}", export_to_csv(response_summary, target_details)),
     }
 }

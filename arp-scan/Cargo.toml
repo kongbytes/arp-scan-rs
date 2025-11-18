@@ -1,0 +1,38 @@
+[package]
+name = "arp-scan"
+description = "A minimalistic ARP scan tool"
+version = "0.15.1"
+readme = "../README.md"
+keywords = ["arp", "scan", "network", "security"]
+categories = ["command-line-utilities"]
+
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+arp-scan-lib = { workspace = true }
+
+# CLI & utilities
+clap = { workspace = true, default-features = false, features = ["std", "suggestions", "color", "help"] }
+ansi_term = { workspace = true }
+ctrlc = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+caps = { workspace = true }
+
+# Network
+pnet = { workspace = true }
+pnet_datalink = { workspace = true }
+ipnetwork = { workspace = true }
+dns-lookup = { workspace = true }
+
+# Parsing & exports
+csv = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
