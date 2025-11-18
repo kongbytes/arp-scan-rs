@@ -1,8 +1,8 @@
-use std::env;
 use std::process;
 use std::sync::Arc;
 
 use ansi_term::Color::{Green, Red};
+use caps::{CapSet, Capability, has_cap};
 use ipnetwork::{IpNetwork, NetworkSize};
 use pnet_datalink::NetworkInterface;
 use serde::Serialize;
@@ -11,11 +11,15 @@ use crate::args::ScanOptions;
 use crate::network::{ResponseSummary, TargetDetails};
 
 /**
- * Based on the current UNIX environment, find if the process is run as root
- * user. This approach only supports Linux-like systems (Ubuntu, Fedore, ...).
+ * Check if the current user has the CAP_NET_RAW capability.
+ *
+ * For network operations like ARP scanning, you don't necessarily need full
+ * root - you just need CAP_NET_RAW capability to perform scans. This was before
+ * implemented as a minimalistic check to see if the "USER" env was set to root,
+ * but failed to work in containerized environments.
  */
-pub fn is_root_user() -> bool {
-    env::var("USER").unwrap_or_else(|_| String::from("")) == *"root"
+pub fn has_network_capability() -> bool {
+    has_cap(None, CapSet::Effective, Capability::CAP_NET_RAW).unwrap_or(false)
 }
 
 /**

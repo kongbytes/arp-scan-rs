@@ -73,6 +73,7 @@ name = "arp-scan"
 version = "0.14.0"
 dependencies = [
  "ansi_term",
+ "caps",
  "clap",
  "csv",
  "ctrlc",
@@ -99,6 +100,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdeb9d870516001442e364c5220d3574d2da8dc765554b4a617230d33fa58ef5"
 dependencies = [
  "objc2",
+]
+
+[[package]]
+name = "caps"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd1ddba47aba30b6a889298ad0109c3b8dcb0e8fc993b459daa7067d46f865e0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
