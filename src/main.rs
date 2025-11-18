@@ -6,17 +6,16 @@ mod vendor;
 
 use std::net::IpAddr;
 use std::process;
-use std::thread;
 use std::sync::Arc;
-use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
+use std::time::Duration;
 
-use crate::args::{ScanOptions, OutputFormat};
+use crate::args::{OutputFormat, ScanOptions};
 use crate::network::NetworkIterator;
 use crate::vendor::Vendor;
 
 fn main() {
-    
     let matches = args::build_args().get_matches();
 
     // Find interfaces & list them if requested
@@ -44,13 +43,14 @@ fn main() {
         utils::print_ascii_packet();
         process::exit(0);
     }
-    
+
     if !cfg!(windows) && !utils::is_root_user() {
         eprintln!("Should run this binary as root or use --help for options");
         process::exit(1);
     }
 
-    let (selected_interface, ip_networks) = network::compute_network_configuration(&interfaces, &scan_options);
+    let (selected_interface, ip_networks) =
+        network::compute_network_configuration(&interfaces, &scan_options);
 
     if scan_options.is_plain_output() {
         utils::display_prescan_details(&ip_networks, selected_interface, scan_options.clone());
@@ -63,7 +63,7 @@ fn main() {
     // local network.
 
     let channel_config = pnet_datalink::Config {
-        read_timeout: Some(Duration::from_millis(network::DATALINK_RCV_TIMEOUT)), 
+        read_timeout: Some(Duration::from_millis(network::DATALINK_RCV_TIMEOUT)),
         ..pnet_datalink::Config::default()
     };
 
@@ -72,7 +72,7 @@ fn main() {
         Ok(_) => {
             eprintln!("Expected an Ethernet datalink channel");
             process::exit(1);
-        },
+        }
         Err(error) => {
             eprintln!("Datalink channel creation failed ({})", error);
             process::exit(1);
@@ -88,7 +88,9 @@ fn main() {
     let mut vendor_list = Vendor::new(&scan_options.oui_file);
 
     let cloned_options = Arc::clone(&scan_options);
-    let arp_responses = thread::spawn(move || network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out, &mut vendor_list));
+    let arp_responses = thread::spawn(move || {
+        network::receive_arp_responses(&mut rx, cloned_options, cloned_timed_out, &mut vendor_list)
+    });
 
     let network_size = utils::compute_network_size(&ip_networks);
 
@@ -96,10 +98,15 @@ fn main() {
     let interval_ms = estimations.interval_ms;
 
     if scan_options.is_plain_output() {
-
         let formatted_ms = time::format_milliseconds(estimations.duration_ms);
-        println!("Estimated scan time {} ({} bytes, {} bytes/s)", formatted_ms, estimations.request_size, estimations.bandwidth);
-        println!("Sending {} ARP requests (waiting at least {}ms, {}ms request interval)", network_size, scan_options.timeout_ms, interval_ms);
+        println!(
+            "Estimated scan time {} ({} bytes, {} bytes/s)",
+            formatted_ms, estimations.request_size, estimations.bandwidth
+        );
+        println!(
+            "Sending {} ARP requests (waiting at least {}ms, {}ms request interval)",
+            network_size, scan_options.timeout_ms, interval_ms
+        );
     }
 
     let has_reached_timeout = Arc::new(AtomicBool::new(false));
@@ -108,7 +115,8 @@ fn main() {
     ctrlc::set_handler(move || {
         eprintln!("[warn] Receiving halt signal, ending scan with partial results");
         cloned_reached_timeout.store(true, Ordering::Relaxed);
-    }).unwrap_or_else(|err| {
+    })
+    .unwrap_or_else(|err| {
         eprintln!("Could not set CTRL+C handler ({})", err);
         process::exit(1);
     });
@@ -118,7 +126,6 @@ fn main() {
     // The retry count does right now use a 'brute-force' strategy without
     // synchronization process with the already known hosts.
     for _ in 0..scan_options.retry_count {
-
         if has_reached_timeout.load(Ordering::Relaxed) {
             break;
         }
@@ -126,13 +133,18 @@ fn main() {
         let ip_addresses = NetworkIterator::new(&ip_networks, scan_options.randomize_targets);
 
         for ip_address in ip_addresses {
-
             if has_reached_timeout.load(Ordering::Relaxed) {
                 break;
             }
 
             if let IpAddr::V4(ipv4_address) = ip_address {
-                network::send_arp_request(&mut tx, selected_interface, source_ip, ipv4_address, Arc::clone(&scan_options));
+                network::send_arp_request(
+                    &mut tx,
+                    selected_interface,
+                    source_ip,
+                    ipv4_address,
+                    Arc::clone(&scan_options),
+                );
                 thread::sleep(Duration::from_millis(interval_ms));
             }
         }
@@ -143,7 +155,6 @@ fn main() {
     // thread will receive a stop request through the 'timed_out' mutex.
     let mut sleep_ms_mount: u64 = 0;
     while !has_reached_timeout.load(Ordering::Relaxed) && sleep_ms_mount < scan_options.timeout_ms {
-        
         thread::sleep(Duration::from_millis(100));
         sleep_ms_mount += 100;
     }
@@ -155,9 +166,17 @@ fn main() {
     });
 
     match &scan_options.output {
-        OutputFormat::Plain => utils::display_scan_results(response_summary, target_details, &scan_options),
-        OutputFormat::Json => println!("{}", utils::export_to_json(response_summary, target_details)),
-        OutputFormat::Yaml => println!("{}", utils::export_to_yaml(response_summary, target_details)),
-        OutputFormat::Csv => print!("{}", utils::export_to_csv(response_summary, target_details))
+        OutputFormat::Plain => {
+            utils::display_scan_results(response_summary, target_details, &scan_options)
+        }
+        OutputFormat::Json => println!(
+            "{}",
+            utils::export_to_json(response_summary, target_details)
+        ),
+        OutputFormat::Yaml => println!(
+            "{}",
+            utils::export_to_yaml(response_summary, target_details)
+        ),
+        OutputFormat::Csv => print!("{}", utils::export_to_csv(response_summary, target_details)),
     }
 }
