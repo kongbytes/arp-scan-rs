@@ -1,4 +1,4 @@
-FROM rust:1.75.0-slim
+FROM rust:1.90.0-slim
 
 # Install SemaphoreCI dependencies
 # https://docs.semaphoreci.com/ci-cd-environment/custom-ci-cd-environment-with-docker/

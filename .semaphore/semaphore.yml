@@ -5,9 +5,8 @@ agent:
     type: e1-standard-2
     os_image: ubuntu2004
   containers:
-    # Rust 1.75 (2021 edition) is currently not supported in Semaphore
     - name: main
-      image: 'saluki/rust-ci:1.75'
+      image: 'saluki/rust-ci:1.90'
 blocks:
   - name: Test release
     task:
@@ -17,4 +16,5 @@ blocks:
             - checkout
             - rustc --version
             - cargo build --verbose
+            - cargo clippy
             - cargo test --verbose
