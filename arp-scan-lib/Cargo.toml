@@ -1,0 +1,22 @@
+[package]
+name = "arp-scan-lib"
+description = "Library for performing ARP scans in a network, powering arp-scan-rs"
+version = "0.15.1"
+readme = "../README.md"
+keywords = ["arp", "scan", "network", "security"]
+categories = ["network-programming"]
+
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dns-lookup = { workspace = true }
+pnet_datalink = { workspace = true }
+csv = { workspace = true }
+ipnetwork = { workspace = true }
+pnet = { workspace = true }
+rand = { workspace = true }
