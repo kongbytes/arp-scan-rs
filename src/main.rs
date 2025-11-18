@@ -44,7 +44,7 @@ fn main() {
         process::exit(0);
     }
 
-    if !cfg!(windows) && !utils::has_network_capability() {
+    if !utils::has_network_capability() {
         eprintln!(
             "Should run this binary as root, an user with CAP_NET_RAW capabilities or use --help for options"
         );

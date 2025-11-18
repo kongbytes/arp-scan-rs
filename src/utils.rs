@@ -2,6 +2,7 @@ use std::process;
 use std::sync::Arc;
 
 use ansi_term::Color::{Green, Red};
+#[cfg(target_os = "linux")]
 use caps::{CapSet, Capability, has_cap};
 use ipnetwork::{IpNetwork, NetworkSize};
 use pnet_datalink::NetworkInterface;
@@ -17,9 +18,24 @@ use crate::network::{ResponseSummary, TargetDetails};
  * root - you just need CAP_NET_RAW capability to perform scans. This was before
  * implemented as a minimalistic check to see if the "USER" env was set to root,
  * but failed to work in containerized environments.
+ *
+ * On Linux, this checks for CAP_NET_RAW capability. On other Unix-like systems
+ * (macOS, BSD, etc.), the capability check is not applicable - permissions must
+ * be granted at runtime (e.g., via sudo).
  */
 pub fn has_network_capability() -> bool {
-    has_cap(None, CapSet::Effective, Capability::CAP_NET_RAW).unwrap_or(false)
+    #[cfg(target_os = "linux")]
+    {
+        has_cap(None, CapSet::Effective, Capability::CAP_NET_RAW).unwrap_or(false)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // On non-Linux systems (macOS, BSD, etc.), we can't check capabilities
+        // at compile time. The user needs to run with appropriate privileges.
+        // Return true here and let the actual network operations fail if
+        // permissions are insufficient.
+        true
+    }
 }
 
 /**

@@ -2,7 +2,7 @@
 name = "arp-scan"
 description = "A minimalistic ARP scan tool"
 license = "AGPL-3.0-or-later"
-version = "0.15.0"
+version = "0.15.1"
 authors = ["Saluki"]
 edition = "2024"
 readme = "README.md"
@@ -16,11 +16,13 @@ rust-version = "1.90"
 [dependencies]
 
 # CLI & utilities
-caps = "0.5.6"
 clap = { version = "4.5", default-features = false, features = ["std", "suggestions", "color", "help"] }
 ansi_term = "0.12"
 rand = "0.9"
 ctrlc = "3.5"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+caps = "0.5.6"
 
 # Network
 pnet = "0.35"
