@@ -1,6 +1,6 @@
 # ARP scanner CLI
 
-[![Build Status](https://saluki.semaphoreci.com/badges/arp-scan-rs/branches/master.svg?style=shields)](https://saluki.semaphoreci.com/projects/arp-scan-rs)
+[![Build Status](https://kongbytes.semaphoreci.com/badges/arp-scan-rs/branches/master.svg?style=shields)](https://kongbytes.semaphoreci.com/projects/arp-scan-rs)
 [![dependency status](https://deps.rs/repo/github/kongbytes/arp-scan-rs/status.svg)](https://deps.rs/repo/github/kongbytes/arp-scan-rs)
 ![crates.io](https://img.shields.io/crates/v/arp-scan.svg)
 
