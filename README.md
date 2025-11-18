@@ -1,7 +1,7 @@
 # ARP scanner CLI
 
 [![Build Status](https://saluki.semaphoreci.com/badges/arp-scan-rs/branches/master.svg?style=shields)](https://saluki.semaphoreci.com/projects/arp-scan-rs)
-[![dependency status](https://deps.rs/repo/github/Saluki/arp-scan-rs/status.svg)](https://deps.rs/repo/github/Saluki/arp-scan-rs)
+[![dependency status](https://deps.rs/repo/github/kongbytes/arp-scan-rs/status.svg)](https://deps.rs/repo/github/kongbytes/arp-scan-rs)
 ![crates.io](https://img.shields.io/crates/v/arp-scan.svg)
 
 Find all hosts in your local network using this fast ARP scanner. The CLI is written in Rust and provides a minimal scanner that finds all hosts using the ARP protocol. Inspired by the awesome [arp-scan project](https://github.com/royhills/arp-scan).
@@ -59,15 +59,43 @@ ARP scan finished, 5 hosts found in 1.623 seconds
 
 ```
 
-## Getting started
+## Installation
 
-Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/Saluki/arp-scan-rs/releases) for other binaries.
+### Install via Homebrew (MacOS)
 
 ```bash
-wget -O arp-scan https://github.com/Saluki/arp-scan-rs/releases/download/v0.15.1/arp-scan-v0.15.1-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+brew install arp-scan-rs
 ```
 
+### Install with pre-built binary (Linux)
+
+Download the `arp-scan` binary for Linux (Ubuntu, Fedora, Debian, ...). See the [releases page](https://github.com/kongbytes/arp-scan-rs/releases) for other binaries.
+
+```bash
+wget -O arp-scan https://github.com/kongbytes/arp-scan-rs/releases/download/v0.15.1/arp-scan-v0.15.1-x86_64-unknown-linux-musl && chmod +x ./arp-scan
+```
+
+### Install from sources
+
+If you have Rust installed, you can build and install `arp-scan` from source using Cargo:
+
+```bash
+cargo install arp-scan
+```
+
+Or clone the repository and build locally:
+
+```bash
+git clone https://github.com/kongbytes/arp-scan-rs.git
+cd arp-scan-rs
+cargo build --release
+# Binary will be available at ./target/release/arp-scan
+```
+
+## Getting started
+
 Optionnaly, fetch the IEEE OUI reference file (CSV format) that contains all MAC address vendors.
+If you choose another file location, use the `--oui-file` flag with the location.
 
 ```bash
 wget -O /usr/share/arp-scan/ieee-oui.csv http://standards-oui.ieee.org/oui/oui.csv
@@ -239,4 +267,4 @@ for linking `Packet.lib` you can just place it in the root of this project.
 
 ## Contributing
 
-Feel free to suggest an improvement, report a bug, or ask something: https://github.com/saluki/arp-scan-rs/issues
+Feel free to suggest an improvement, report a bug, or ask something: https://github.com/kongbytes/arp-scan-rs/issues
