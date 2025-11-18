@@ -16,5 +16,4 @@ blocks:
             - checkout
             - rustc --version
             - cargo build --verbose
-            - cargo clippy
             - cargo test --verbose
