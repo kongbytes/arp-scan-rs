@@ -22,9 +22,6 @@ clap = { workspace = true, default-features = false, features = ["std", "suggest
 ansi_term = { workspace = true }
 ctrlc = { workspace = true }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-caps = { workspace = true }
-
 # Network
 pnet = { workspace = true }
 pnet_datalink = { workspace = true }
@@ -36,3 +33,6 @@ csv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+caps = { workspace = true }

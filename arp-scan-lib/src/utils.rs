@@ -2,7 +2,6 @@ use std::process;
 use std::sync::Arc;
 
 use crate::scan_options::ScanOptions;
-#[cfg(target_os = "linux")]
 use ipnetwork::{IpNetwork, NetworkSize};
 use pnet_datalink::NetworkInterface;
 
