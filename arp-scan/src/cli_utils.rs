@@ -2,6 +2,7 @@ use ansi_term::Color::{Green, Red};
 use arp_scan_lib::network::{ResponseSummary, TargetDetails};
 use arp_scan_lib::scan_options::ScanOptions;
 use arp_scan_lib::utils::select_default_interface;
+#[cfg(target_os = "linux")]
 use caps::{CapSet, Capability, has_cap};
 use pnet_datalink::NetworkInterface;
 use serde::Serialize;
